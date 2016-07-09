@@ -1798,15 +1798,16 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
 
         simplecpp::OutputList outputList;
         std::list<simplecpp::MacroUsage> macroUsage;
+        std::vector<std::string> files;
 
         std::istringstream istr(filedata);
-        const simplecpp::TokenList &tokens1 = simplecpp::TokenList(istr, Path::simplifyPath(filename), &outputList);
-        const simplecpp::TokenList &tokens2 = simplecpp::preprocess(tokens1, defines, &outputList, &macroUsage);
+        const simplecpp::TokenList &tokens1 = simplecpp::TokenList(istr, files, Path::simplifyPath(filename), &outputList);
+        const simplecpp::TokenList &tokens2 = simplecpp::preprocess(tokens1, files, defines, &outputList, &macroUsage);
 
         if (!_settings.force) {
             for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {
                 if (it->type == simplecpp::Output::ERROR) {
-                    error(it->location.file, it->location.line, it->msg);
+                    error(it->location.file(), it->location.line, it->msg);
                     return "";
                 }
             }
@@ -1819,7 +1820,7 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
                 continue;
             if (tok->next && tok->next->str == "endfile")
                 continue;
-            Directive directive(tok->location.file, tok->location.line, "");
+            Directive directive(tok->location.file(), tok->location.line, "");
             for (const simplecpp::Token *tok2 = tok; tok2 && tok2->location.line == directive.linenr; tok2 = tok2->next) {
                 if (tok2->comment)
                     continue;
@@ -1847,7 +1848,7 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
                     continue;
                 bool directiveLocation = false;
                 for (std::list<Directive>::const_iterator dirIt = directives.begin(); dirIt != directives.end(); ++dirIt) {
-                    if (mu.useLocation.file == dirIt->file && mu.useLocation.line == dirIt->linenr) {
+                    if (mu.useLocation.file() == dirIt->file && mu.useLocation.line == dirIt->linenr) {
                         directiveLocation = true;
                         break;
                     }
@@ -1875,9 +1876,15 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
             if (d2.str.compare(0,14,"#pragma endasm") != 0 || d1.file != d2.file)
                 continue;
 
-            simplecpp::Location loc;
-            loc.file = d1.file;
+            simplecpp::Location loc(files);
+            loc.fileIndex = ~0U;
             loc.col = 0U;
+            for (unsigned int i = 0; i < files.size(); ++i) {
+                if (files[i] == d1.file) {
+                    loc.fileIndex = i;
+                    break;
+                }
+            }
 
             for (unsigned int linenr = d1.linenr + 1U; linenr < d2.linenr; linenr++) {
                 loc.line = linenr;
@@ -1887,13 +1894,13 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
 
         const bool writeLocations = (filedata.find("\n#file \"") != std::string::npos);
 
-        std::string prevfile;
+        unsigned int prevfile;
         unsigned int line = 1;
         std::ostringstream ret;
         for (const simplecpp::Token *tok = tokens2.cbegin(); tok; tok = tok->next) {
-            if (writeLocations && tok->location.file != prevfile) {
-                ret << "\n#line " << tok->location.line << " \"" << tok->location.file << "\"\n";
-                prevfile = tok->location.file;
+            if (writeLocations && tok->location.fileIndex != prevfile) {
+                ret << "\n#line " << tok->location.line << " \"" << tok->location.file() << "\"\n";
+                prevfile = tok->location.fileIndex;
                 line = tok->location.line;
             }
 

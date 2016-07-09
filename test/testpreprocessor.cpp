@@ -52,8 +52,9 @@ public:
         static std::string expandMacros(const char code[], ErrorLogger *errorLogger = 0) {
             std::istringstream istr(code);
             simplecpp::OutputList outputList;
-            const simplecpp::TokenList tokens1 = simplecpp::TokenList(istr, "file.cpp", &outputList);
-            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, simplecpp::Defines(), &outputList);
+            std::vector<std::string> files;
+            const simplecpp::TokenList tokens1 = simplecpp::TokenList(istr, files, "file.cpp", &outputList);
+            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, simplecpp::Defines(), &outputList);
 
             if (errorLogger) {
                 for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {
@@ -61,7 +62,7 @@ public:
                     if (output.type == simplecpp::Output::ERROR) {
 
                         std::list<ErrorLogger::ErrorMessage::FileLocation> locationList;
-                        ErrorLogger::ErrorMessage::FileLocation loc(output.location.file, output.location.line);
+                        ErrorLogger::ErrorMessage::FileLocation loc(output.location.file(), output.location.line);
                         locationList.push_back(loc);
                         errorLogger->reportErr(ErrorLogger::ErrorMessage(locationList,
                                                Severity::error,
