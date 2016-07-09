@@ -579,7 +579,7 @@ public:
         parseDefine(tokenListDefine.cbegin());
     }
 
-    Macro(const Macro &macro, std::vector<std::string> &f) : files(f), tokenListDefine(f) {
+    Macro(const Macro &macro) : nameToken(nullptr), files(macro.files), tokenListDefine(macro.files) {
         *this = macro;
     }
 
@@ -594,8 +594,8 @@ public:
         }
     }
 
-    const Token * expand(TokenList * const output, const Location &loc, const Token * const nameToken, const std::map<TokenString,Macro> &macros, const std::set<TokenString> &expandedmacros1) const {
-        std::set<TokenString> expandedmacros(expandedmacros1);
+    const Token * expand(TokenList * const output, const Location &loc, const Token * const nameToken, const std::map<TokenString,Macro> &macros, std::set<TokenString> expandedmacros) const {
+        const std::set<TokenString> expandedmacros1(expandedmacros);
         expandedmacros.insert(nameToken->str);
 
         usageList.push_back(loc);
