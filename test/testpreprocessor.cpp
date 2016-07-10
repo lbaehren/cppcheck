@@ -218,7 +218,7 @@ private:
         TEST_CASE(preprocessor_doublesharp);
         TEST_CASE(preprocessor_include_in_str);
         TEST_CASE(va_args_1);
-        TEST_CASE(va_args_2);
+        //TEST_CASE(va_args_2); invalid code
         TEST_CASE(va_args_3);
         TEST_CASE(va_args_4);
         TEST_CASE(va_args_5);
@@ -1838,6 +1838,7 @@ private:
         }
 
         {
+            /* TODO: What to do here? since there are syntax error simplecpp outputs ""
             const char filedata[] = "#define BC(b, c...) 0##b * 0##c\n"
                                     "#define ABC(a, b...) a + BC(b)\n"
                                     "\n"
@@ -1845,7 +1846,8 @@ private:
                                     "ABC(2,3);\n"
                                     "ABC(4,5,6);\n";
 
-            //ASSERT_EQUALS("\n\n\n1 + 0 * 0;\n2 + 03 * 0;\n4 + 05 * 06;", OurPreprocessor::expandMacros(filedata));
+            ASSERT_EQUALS("\n\n\n1 + 0 * 0;\n2 + 03 * 0;\n4 + 05 * 06;", OurPreprocessor::expandMacros(filedata));
+            */
         }
 
         {
@@ -2125,7 +2127,7 @@ private:
 
         ASSERT_EQUALS("\nprintf ( \"[0x%lx-0x%lx)\" , pstart , pend ) ;", actual);
     }
-
+/*
     void va_args_2() const {
         const char filedata[] = "#define DBG(fmt, args...) printf(fmt, ## args)\n"
                                 "DBG(\"hello\");\n";
@@ -2135,7 +2137,7 @@ private:
 
         // invalid code ASSERT_EQUALS("\nprintf ( \"hello\" ) ;", actual);
     }
-
+*/
     void va_args_3() const {
         const char filedata[] = "#define FRED(...) { fred(__VA_ARGS__); }\n"
                                 "FRED(123)\n";
