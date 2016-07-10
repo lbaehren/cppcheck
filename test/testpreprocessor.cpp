@@ -963,7 +963,7 @@ private:
 
         // Expected configurations: "" and "ABC"
         ASSERT_EQUALS(2, static_cast<unsigned int>(actual.size()));
-        ASSERT_EQUALS("\n#line 4 \"file.c\"\nint main ( ) { }", actual[""]);
+        ASSERT_EQUALS("\n\n\nint main ( ) { }", actual[""]);
         ASSERT_EQUALS("\n#line 1 \"abc.h\"\nclass A { } ;\n#line 4 \"file.c\"\n int main ( ) { }", actual["ABC"]);
     }
 

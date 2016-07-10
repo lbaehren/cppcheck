@@ -1926,7 +1926,7 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
 
         const bool writeLocations = (filedata.find("\n#file \"") != std::string::npos);
 
-        unsigned int prevfile;
+        unsigned int prevfile = 0;
         unsigned int line = 1;
         std::ostringstream ret;
         for (const simplecpp::Token *tok = tokens2.cbegin(); tok; tok = tok->next) {
