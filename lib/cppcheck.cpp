@@ -18,6 +18,7 @@
 #include "cppcheck.h"
 
 #include "preprocessor.h" // Preprocessor
+#include "simplecpp.h"
 #include "tokenize.h" // Tokenizer
 
 #include "check.h"
@@ -102,7 +103,27 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
         std::list<std::string> configurations;
         std::string filedata;
 
-        {
+        const bool usesimplecpp = (!_settings.userDefines.empty() && _settings.maxConfigs==1U);
+
+        if (usesimplecpp) {
+            simplecpp::Defines defines;
+            for (std::string::size_type pos1 = 0U; pos1 != std::string::npos;) {
+                 const std::string::size_type pos2 = _settings.userDefines.find(";",pos1);
+                 const std::string def = (pos2 == std::string::npos) ? _settings.userDefines.substr(pos1) : _settings.userDefines.substr(pos1, pos2 - pos1);
+                 pos1 = (pos2 == std::string::npos) ? pos2 : pos2 + 1U;
+                 std::string::size_type eq = def.find("=");
+                 if (eq != std::string::npos)
+                    defines[def.substr(0,eq)] = def.substr(eq+1U);
+                else
+                    defines[def] = "1";
+            }
+            simplecpp::OutputList outputList;
+            std::vector<std::string> files;
+            std::ifstream f(filename);
+            const simplecpp::TokenList tokens1(f, files, filename, &outputList);
+            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, defines, &outputList);
+            filedata = tokens2.stringify();
+        } else {
             Timer t("Preprocessor::preprocess", _settings.showtime, &S_timerResults);
             preprocessor.preprocess(fileStream, filedata, configurations, filename, _settings.includePaths);
         }
@@ -184,9 +205,14 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
                 cfg = _settings.userDefines + cfg;
             }
 
-            Timer t("Preprocessor::getcode", _settings.showtime, &S_timerResults);
-            std::string codeWithoutCfg = preprocessor.getcode(filedata, cfg, filename);
-            t.Stop();
+            std::string codeWithoutCfg;
+            if (usesimplecpp) {
+                codeWithoutCfg = filedata;
+            } else {
+                Timer t("Preprocessor::getcode", _settings.showtime, &S_timerResults);
+                codeWithoutCfg = preprocessor.getcode(filedata, cfg, filename);
+                t.Stop();
+            }
 
             codeWithoutCfg += _settings.append();
 
