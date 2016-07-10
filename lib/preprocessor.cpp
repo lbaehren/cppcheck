@@ -1836,12 +1836,12 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
         inlineSuppressions(tokens1);
         const simplecpp::TokenList &tokens2 = simplecpp::preprocess(tokens1, files, defines, &outputList, &macroUsage);
 
-        if (!_settings.force) {
-            for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {
-                if (it->type == simplecpp::Output::ERROR) {
+        bool showerror = (!_settings.userDefines.empty() && !_settings.force);
+        for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {
+            if (it->type == simplecpp::Output::ERROR) {
+                if (it->msg.compare(0,6,"#error")!=0 || showerror)
                     error(it->location.file(), it->location.line, it->msg);
-                    return "";
-                }
+                return "";
             }
         }
 
