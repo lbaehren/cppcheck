@@ -92,7 +92,7 @@ Library::Error Library::load(const char exename[], const char path[])
     } else
         absolute_path = Path::getAbsoluteFilePath(path);
 
-    if (error == tinyxml2::XML_NO_ERROR) {
+    if (error == tinyxml2::XML_SUCCESS) {
         if (_files.find(absolute_path) == _files.end()) {
             Error err = load(doc);
             if (err.errorcode == OK)
@@ -109,7 +109,7 @@ Library::Error Library::load(const char exename[], const char path[])
 bool Library::loadxmldata(const char xmldata[], std::size_t len)
 {
     tinyxml2::XMLDocument doc;
-    return (tinyxml2::XML_NO_ERROR == doc.Parse(xmldata, len)) && (load(doc).errorcode == OK);
+    return (tinyxml2::XML_SUCCESS == doc.Parse(xmldata, len)) && (load(doc).errorcode == OK);
 }
 
 Library::Error Library::load(const tinyxml2::XMLDocument &doc)
@@ -161,10 +161,9 @@ Library::Error Library::load(const tinyxml2::XMLDocument &doc)
                     AllocFunc temp;
                     temp.groupId = allocationId;
 
-                    const char *init = memorynode->Attribute("init");
-                    if (init && strcmp(init,"false")==0) {
+                    if (memorynode->Attribute("init", "false"))
                         returnuninitdata.insert(memorynode->GetText());
-                    }
+
                     const char *arg = memorynode->Attribute("arg");
                     if (arg)
                         temp.arg = atoi(arg);
@@ -234,10 +233,8 @@ Library::Error Library::load(const tinyxml2::XMLDocument &doc)
                 return Error(MISSING_ATTRIBUTE, "ext");
             _markupExtensions.insert(extension);
 
-            const char * const reporterrors = node->Attribute("reporterrors");
-            _reporterrors[extension] = (reporterrors && strcmp(reporterrors, "true") == 0);
-            const char * const aftercode = node->Attribute("aftercode");
-            _processAfterCode[extension] = (aftercode && strcmp(aftercode, "true") == 0);
+            _reporterrors[extension] = (node->Attribute("reporterrors", "true") != nullptr);
+            _processAfterCode[extension] = (node->Attribute("aftercode", "true") != nullptr);
 
             for (const tinyxml2::XMLElement *markupnode = node->FirstChildElement(); markupnode; markupnode = markupnode->NextSiblingElement()) {
                 const std::string markupnodename = markupnode->Name();
@@ -539,9 +536,12 @@ Library::Error Library::loadFunction(const tinyxml2::XMLElement * const node, co
             leakignore.insert(name);
         else if (functionnodename == "use-retval")
             _useretval.insert(name);
-        else if (functionnodename == "arg" && functionnode->Attribute("nr") != nullptr) {
-            const bool bAnyArg = strcmp(functionnode->Attribute("nr"),"any")==0;
-            const int nr = (bAnyArg) ? -1 : atoi(functionnode->Attribute("nr"));
+        else if (functionnodename == "arg") {
+            const char* argNrString = functionnode->Attribute("nr");
+            if (!argNrString)
+                return Error(MISSING_ATTRIBUTE, "nr");
+            const bool bAnyArg = strcmp(argNrString, "any")==0;
+            const int nr = (bAnyArg) ? -1 : atoi(argNrString);
             bool notbool = false;
             bool notnull = false;
             bool notuninit = false;
@@ -629,6 +629,7 @@ Library::Error Library::loadFunction(const tinyxml2::XMLElement * const node, co
             argumentChecks[name][nr].notuninit = notuninit;
             argumentChecks[name][nr].formatstr = formatstr;
             argumentChecks[name][nr].strz      = strz;
+            argumentChecks[name][nr].optional  = functionnode->Attribute("default") != nullptr;
         } else if (functionnodename == "ignorefunction") {
             _ignorefunction.insert(name);
         } else if (functionnodename == "formatstr") {
@@ -903,13 +904,17 @@ bool Library::isNotLibraryFunction(const Token *ftok) const
     if (it == argumentChecks.end())
         return (callargs != 0);
     int args = 0;
+    int firstOptionalArg = -1;
     for (std::map<int, ArgumentChecks>::const_iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
         if (it2->first > args)
             args = it2->first;
+        if (it2->second.optional && (firstOptionalArg == -1 || firstOptionalArg > it2->first))
+            firstOptionalArg = it2->first;
+
         if (it2->second.formatstr)
             return args > callargs;
     }
-    return args != callargs;
+    return (firstOptionalArg < 0) ? args != callargs : !(callargs >= firstOptionalArg-1 && callargs <= args);
 }
 
 const Library::WarnInfo* Library::getWarnInfo(const Token* ftok) const
