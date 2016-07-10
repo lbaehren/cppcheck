@@ -112,45 +112,6 @@ static void makeConditionalVariable(std::ostream &os, const std::string &variabl
        << "\n";
 }
 
-static std::string getLibName(const std::string &path)
-{
-    // path can be e.g. "externals/foo/foo.cpp" then returned
-    // library name is "FOO".
-    std::string libName = path.substr(path.find('/')+1);
-    libName = libName.substr(0, libName.find('/'));
-    std::transform(libName.begin(), libName.end(),libName.begin(), ::toupper);
-    return libName;
-}
-
-static void makeExtObj(std::ostream &fout, const std::vector<std::string> &externalfiles)
-{
-    bool start = true;
-    std::ostringstream libNames;
-    std::string libName;
-    for (std::size_t i = 0; i < externalfiles.size(); ++i) {
-        if (start) {
-            libName = getLibName(externalfiles[i]);
-            fout << "ifndef " << libName << "\n";
-            fout << "    " << libName << " = " << objfile(externalfiles[i]);
-            libNames << "EXTOBJ += $(" << libName << ")\n";
-            start = false;
-        } else {
-            fout << std::string(14, ' ') << objfile(externalfiles[i]);
-        }
-
-        if (i+1 >= externalfiles.size() || libName != getLibName(externalfiles[i+1])) {
-            // This was the last file for this library
-            fout << "\nendif\n\n\n";
-            start = true;
-        } else {
-            // There are more files for this library
-            fout << " \\\n";
-        }
-    }
-
-    fout << libNames.str();
-}
-
 int main(int argc, char **argv)
 {
     const bool release(argc >= 2 && std::string(argv[1]) == "--release");
@@ -158,6 +119,10 @@ int main(int argc, char **argv)
     // Get files..
     std::vector<std::string> libfiles;
     getCppFiles(libfiles, "lib/", false);
+
+    std::vector<std::string> extfiles;
+    extfiles.push_back("externals/simplecpp/simplecpp.cpp");
+    extfiles.push_back("externals/tinyxml/tinyxml2.cpp");
 
     std::vector<std::string> clifiles;
     getCppFiles(clifiles, "cli/", false);
@@ -172,10 +137,6 @@ int main(int argc, char **argv)
         std::cerr << "No files found. Are you in the correct directory?" << std::endl;
         return EXIT_FAILURE;
     }
-
-    std::vector<std::string> externalfiles;
-    getCppFiles(externalfiles, "externals/", true);
-
 
     // QMAKE - lib/lib.pri
     {
@@ -390,6 +351,10 @@ int main(int argc, char **argv)
     for (size_t i = 1; i < libfiles.size(); ++i)
         fout << " \\\n" << std::string(14, ' ') << objfile(libfiles[i]);
     fout << "\n\n";
+    fout << "EXTOBJ =      " << objfile(extfiles[0]);
+    for (size_t i = 1; i < extfiles.size(); ++i)
+        fout << " \\\n" << std::string(14, ' ') << objfile(extfiles[i]);
+    fout << "\n\n";
     fout << "CLIOBJ =      " << objfile(clifiles[0]);
     for (size_t i = 1; i < clifiles.size(); ++i)
         fout << " \\\n" << std::string(14, ' ') << objfile(clifiles[i]);
@@ -398,8 +363,6 @@ int main(int argc, char **argv)
     for (size_t i = 1; i < testfiles.size(); ++i)
         fout << " \\\n" << std::string(14, ' ') << objfile(testfiles[i]);
     fout << "\n\n";
-
-    makeExtObj(fout, externalfiles);
 
     fout << ".PHONY: run-dmake\n\n";
     fout << "\n###### Targets\n\n";
@@ -418,10 +381,10 @@ int main(int argc, char **argv)
     fout << "\t$(CXX) $(CXXFLAGS) -o dmake tools/dmake.o cli/filelister.o cli/pathmatch.o lib/path.o -Ilib $(LDFLAGS)\n\n";
     fout << "run-dmake: dmake\n";
     fout << "\t./dmake\n\n";
-    fout << "reduce:\ttools/reduce.o externals/tinyxml/tinyxml2.o $(LIBOBJ)\n";
-    fout << "\t$(CXX) $(CPPFLAGS) $(CXXFLAGS) -g -o reduce tools/reduce.o -Ilib -Iexternals/tinyxml $(LIBOBJ) $(LIBS) externals/tinyxml/tinyxml2.o $(LDFLAGS) $(RDYNAMIC)\n\n";
+    fout << "reduce:\ttools/reduce.o $(LIBOBJ) $(EXTOBJ)\n";
+    fout << "\t$(CXX) $(CPPFLAGS) $(CXXFLAGS) -g -o reduce tools/reduce.o $(INCLUDE_FOR_LIB) $(LIBOBJ) $(LIBS) $(EXTOBJ) $(LDFLAGS) $(RDYNAMIC)\n\n";
     fout << "clean:\n";
-    fout << "\trm -f build/*.o lib/*.o cli/*.o test/*.o tools/*.o externals/tinyxml/*.o testrunner reduce dmake cppcheck cppcheck.1\n\n";
+    fout << "\trm -f build/*.o lib/*.o cli/*.o test/*.o tools/*.o externals/*/*.o testrunner reduce dmake cppcheck cppcheck.1\n\n";
     fout << "man:\tman/cppcheck.1\n\n";
     fout << "man/cppcheck.1:\t$(MAN_SOURCE)\n\n";
     fout << "\t$(XP) $(DB2MAN) $(MAN_SOURCE)\n\n";
@@ -443,7 +406,7 @@ int main(int argc, char **argv)
     compilefiles(fout, libfiles, "${INCLUDE_FOR_LIB}");
     compilefiles(fout, clifiles, "${INCLUDE_FOR_CLI}");
     compilefiles(fout, testfiles, "${INCLUDE_FOR_TEST}");
-    compilefiles(fout, externalfiles, "${INCLUDE_FOR_LIB}");
+    compilefiles(fout, extfiles, "");
     compilefiles(fout, toolsfiles, "${INCLUDE_FOR_LIB}");
 
     return 0;
