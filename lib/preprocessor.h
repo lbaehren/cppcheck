@@ -21,12 +21,14 @@
 #define preprocessorH
 //---------------------------------------------------------------------------
 
+#include "config.h"
+#include "simplecpp.h"
+
 #include <map>
 #include <istream>
 #include <string>
 #include <list>
 #include <set>
-#include "config.h"
 
 class ErrorLogger;
 class Settings;
@@ -82,6 +84,8 @@ public:
 
     static bool missingIncludeFlag;
     static bool missingSystemIncludeFlag;
+
+    void inlineSuppressions(const simplecpp::TokenList &tokens);
 
     /**
      * Extract the code for each configuration

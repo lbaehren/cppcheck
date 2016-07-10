@@ -108,11 +108,11 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
         if (usesimplecpp) {
             simplecpp::Defines defines;
             for (std::string::size_type pos1 = 0U; pos1 != std::string::npos;) {
-                 const std::string::size_type pos2 = _settings.userDefines.find(";",pos1);
-                 const std::string def = (pos2 == std::string::npos) ? _settings.userDefines.substr(pos1) : _settings.userDefines.substr(pos1, pos2 - pos1);
-                 pos1 = (pos2 == std::string::npos) ? pos2 : pos2 + 1U;
-                 std::string::size_type eq = def.find("=");
-                 if (eq != std::string::npos)
+                const std::string::size_type pos2 = _settings.userDefines.find(";",pos1);
+                const std::string def = (pos2 == std::string::npos) ? _settings.userDefines.substr(pos1) : _settings.userDefines.substr(pos1, pos2 - pos1);
+                pos1 = (pos2 == std::string::npos) ? pos2 : pos2 + 1U;
+                std::string::size_type eq = def.find("=");
+                if (eq != std::string::npos)
                     defines[def.substr(0,eq)] = def.substr(eq+1U);
                 else
                     defines[def] = "1";
@@ -121,6 +121,7 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
             std::vector<std::string> files;
             std::ifstream f(filename);
             const simplecpp::TokenList tokens1(f, files, filename, &outputList);
+            preprocessor.inlineSuppressions(tokens1);
             const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, defines, &outputList);
             filedata = tokens2.stringify();
         } else {

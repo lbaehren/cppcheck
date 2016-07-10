@@ -111,7 +111,7 @@ ifndef INCLUDE_FOR_LIB
 endif
 
 ifndef INCLUDE_FOR_CLI
-    INCLUDE_FOR_CLI=-Ilib -Iexternals/tinyxml
+    INCLUDE_FOR_CLI=-Ilib -Iexternals/simplecpp -Iexternals/tinyxml
 endif
 
 ifndef INCLUDE_FOR_TEST

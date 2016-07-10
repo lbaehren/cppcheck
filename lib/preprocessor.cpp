@@ -378,6 +378,37 @@ std::string Preprocessor::readpreprocessor(std::istream &istr, const unsigned in
     return removeIf0(result);
 }
 
+void Preprocessor::inlineSuppressions(const simplecpp::TokenList &tokens)
+{
+    if (!_settings.inlineSuppressions)
+        return;
+
+    std::list<std::string> suppressionIDs;
+
+    for (const simplecpp::Token *tok = tokens.cbegin(); tok; tok = tok->next) {
+        if (tok->comment) {
+            std::istringstream iss(tok->str.substr(2));
+            std::string word;
+            iss >> word;
+            if (word != "cppcheck-suppress")
+                continue;
+            iss >> word;
+            if (iss)
+                suppressionIDs.push_back(word);
+            continue;
+        }
+
+        if (suppressionIDs.empty())
+            continue;
+
+        // Add the suppressions.
+        for (std::list<std::string>::const_iterator it = suppressionIDs.begin(); it != suppressionIDs.end(); ++it) {
+            _settings.nomsg.addSuppression(*it, tok->location.file(), tok->location.line);
+        }
+        suppressionIDs.clear();
+    }
+}
+
 std::string Preprocessor::preprocessCleanupDirectives(const std::string &processedFile)
 {
     std::ostringstream code;
@@ -1802,6 +1833,7 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
 
         std::istringstream istr(filedata);
         const simplecpp::TokenList &tokens1 = simplecpp::TokenList(istr, files, Path::simplifyPath(filename), &outputList);
+        inlineSuppressions(tokens1);
         const simplecpp::TokenList &tokens2 = simplecpp::preprocess(tokens1, files, defines, &outputList, &macroUsage);
 
         if (!_settings.force) {
