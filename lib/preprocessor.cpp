@@ -1833,8 +1833,10 @@ static void splitcfg(const std::string &cfg, std::list<std::string> &defines, co
     }
 }
 
-std::string Preprocessor::getcode(const std::string &filedata, const std::string &cfg, const std::string &filename)
+std::string Preprocessor::getcode(const simplecpp::TokenList &tokens1, const std::string &cfg, std::vector<std::string> &files, const bool writeLocations)
 {
+    const std::string filename(files[0]);
+
     // Create a map for the cfg for faster access to defines
     simplecpp::DUI dui;
 
@@ -1845,13 +1847,10 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
 
     dui.undefined = _settings.userUndefs;
 
+    dui.includePaths = _settings.includePaths;
+
     simplecpp::OutputList outputList;
     std::list<simplecpp::MacroUsage> macroUsage;
-    std::vector<std::string> files;
-
-    std::istringstream istr(filedata);
-    const simplecpp::TokenList &tokens1 = simplecpp::TokenList(istr, files, Path::simplifyPath(filename), &outputList);
-    inlineSuppressions(tokens1);
     const simplecpp::TokenList &tokens2 = simplecpp::preprocess(tokens1, files, dui, &outputList, &macroUsage);
 
     bool showerror = (!_settings.userDefines.empty() && !_settings.force);
@@ -1939,8 +1938,6 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
         }
     }
 
-    const bool writeLocations = (filedata.find("\n#file \"") != std::string::npos);
-
     unsigned int prevfile = 0;
     unsigned int line = 1;
     std::ostringstream ret;
@@ -1983,6 +1980,25 @@ std::string Preprocessor::getcode(const std::string &filedata, const std::string
     }
 
     return ret.str();
+}
+
+std::string Preprocessor::getcode(const std::string &filedata, const std::string &cfg, const std::string &filename)
+{
+    simplecpp::OutputList outputList;
+    std::vector<std::string> files;
+
+    std::istringstream istr(filedata);
+    const simplecpp::TokenList &tokens1 = simplecpp::TokenList(istr, files, Path::simplifyPath(filename), &outputList);
+    inlineSuppressions(tokens1);
+
+    for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {
+        if (it->type == simplecpp::Output::ERROR) {
+            error(it->location.file(), it->location.line, it->msg);
+            return "";
+        }
+    }
+
+    return getcode(tokens1, cfg, files, filedata.find("#file") != std::string::npos);
 }
 
 void Preprocessor::error(const std::string &filename, unsigned int linenr, const std::string &msg)

@@ -103,27 +103,21 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
         std::list<std::string> configurations;
         std::string filedata;
 
-        const bool usesimplecpp = (!_settings.userDefines.empty() && _settings.maxConfigs==1U);
-
-        if (usesimplecpp) {
-            simplecpp::DUI dui;
-            for (std::string::size_type pos1 = 0U; pos1 != std::string::npos;) {
-                const std::string::size_type pos2 = _settings.userDefines.find(";",pos1);
-                const std::string def = (pos2 == std::string::npos) ? _settings.userDefines.substr(pos1) : _settings.userDefines.substr(pos1, pos2 - pos1);
-                dui.defines.push_back(def);
-                pos1 = (pos2 == std::string::npos) ? pos2 : pos2 + 1U;
-            }
-            simplecpp::OutputList outputList;
-            std::vector<std::string> files;
-            std::ifstream f(filename);
-            const simplecpp::TokenList tokens1(f, files, filename, &outputList);
-            preprocessor.inlineSuppressions(tokens1);
-            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, dui, &outputList);
-            filedata = tokens2.stringify();
-        } else {
+        // Get configurations..
+        if (_settings.userDefines.empty() || _settings.force) {
             Timer t("Preprocessor::preprocess", _settings.showtime, &S_timerResults);
             preprocessor.preprocess(fileStream, filedata, configurations, filename, _settings.includePaths);
+            fileStream.clear();
+            fileStream.seekg(0, fileStream.beg);
+        } else {
+            configurations.clear();
+            configurations.push_back(_settings.userDefines);
         }
+
+        simplecpp::OutputList outputList;
+        std::vector<std::string> files;
+        const simplecpp::TokenList tokens1(fileStream, files, filename, &outputList);
+        preprocessor.inlineSuppressions(tokens1);
 
         if (_settings.checkConfiguration) {
             return 0;
@@ -149,11 +143,6 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
                 }
                 break;
             }
-        }
-
-        if (!_settings.userDefines.empty() && _settings.maxConfigs==1U) {
-            configurations.clear();
-            configurations.push_back(_settings.userDefines);
         }
 
         if (!_settings.force && configurations.size() > _settings.maxConfigs) {
@@ -203,14 +192,7 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
             }
 
             std::string codeWithoutCfg;
-            if (usesimplecpp) {
-                codeWithoutCfg = filedata;
-            } else {
-                Timer t("Preprocessor::getcode", _settings.showtime, &S_timerResults);
-                codeWithoutCfg = preprocessor.getcode(filedata, cfg, filename);
-                t.Stop();
-            }
-
+            codeWithoutCfg = preprocessor.getcode(tokens1, cfg, files, true);
             codeWithoutCfg += _settings.append();
 
             if (_settings.preprocessOnly) {

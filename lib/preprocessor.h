@@ -128,6 +128,8 @@ public:
     /** should __cplusplus be defined? */
     static bool cplusplus(const Settings *settings, const std::string &filename);
 
+    std::string getcode(const simplecpp::TokenList &tokens1, const std::string &cfg, std::vector<std::string> &files, const bool writeLocations);
+
     /**
      * Get preprocessed code for a given configuration
      * @param filedata file data including preprocessing 'if', 'define', etc
