@@ -106,23 +106,19 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
         const bool usesimplecpp = (!_settings.userDefines.empty() && _settings.maxConfigs==1U);
 
         if (usesimplecpp) {
-            simplecpp::Defines defines;
+            simplecpp::DUI dui;
             for (std::string::size_type pos1 = 0U; pos1 != std::string::npos;) {
                 const std::string::size_type pos2 = _settings.userDefines.find(";",pos1);
                 const std::string def = (pos2 == std::string::npos) ? _settings.userDefines.substr(pos1) : _settings.userDefines.substr(pos1, pos2 - pos1);
+                dui.defines.push_back(def);
                 pos1 = (pos2 == std::string::npos) ? pos2 : pos2 + 1U;
-                std::string::size_type eq = def.find("=");
-                if (eq != std::string::npos)
-                    defines[def.substr(0,eq)] = def.substr(eq+1U);
-                else
-                    defines[def] = "1";
             }
             simplecpp::OutputList outputList;
             std::vector<std::string> files;
             std::ifstream f(filename);
             const simplecpp::TokenList tokens1(f, files, filename, &outputList);
             preprocessor.inlineSuppressions(tokens1);
-            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, defines, &outputList);
+            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, dui, &outputList);
             filedata = tokens2.stringify();
         } else {
             Timer t("Preprocessor::preprocess", _settings.showtime, &S_timerResults);

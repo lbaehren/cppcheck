@@ -54,7 +54,7 @@ public:
             simplecpp::OutputList outputList;
             std::vector<std::string> files;
             const simplecpp::TokenList tokens1 = simplecpp::TokenList(istr, files, "file.cpp", &outputList);
-            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, simplecpp::Defines(), &outputList);
+            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, simplecpp::DUI(), &outputList);
 
             if (errorLogger) {
                 for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {
@@ -2127,17 +2127,17 @@ private:
 
         ASSERT_EQUALS("\nprintf ( \"[0x%lx-0x%lx)\" , pstart , pend ) ;", actual);
     }
-/*
-    void va_args_2() const {
-        const char filedata[] = "#define DBG(fmt, args...) printf(fmt, ## args)\n"
-                                "DBG(\"hello\");\n";
+    /*
+        void va_args_2() const {
+            const char filedata[] = "#define DBG(fmt, args...) printf(fmt, ## args)\n"
+                                    "DBG(\"hello\");\n";
 
-        // Preprocess..
-        std::string actual = OurPreprocessor::expandMacros(filedata);
+            // Preprocess..
+            std::string actual = OurPreprocessor::expandMacros(filedata);
 
-        // invalid code ASSERT_EQUALS("\nprintf ( \"hello\" ) ;", actual);
-    }
-*/
+            // invalid code ASSERT_EQUALS("\nprintf ( \"hello\" ) ;", actual);
+        }
+    */
     void va_args_3() const {
         const char filedata[] = "#define FRED(...) { fred(__VA_ARGS__); }\n"
                                 "FRED(123)\n";
@@ -3390,7 +3390,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
-        ASSERT_EQUALS("\n\n\n", actual[""]);
+        ASSERT_EQUALS("", actual[""]);
     }
 
     void undef2() {
@@ -3410,7 +3410,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
-        ASSERT_EQUALS("\nFred & Wilma\n\n", actual[""]);
+        ASSERT_EQUALS("\nFred & Wilma", actual[""]);
     }
 
     void undef3() {
@@ -3431,7 +3431,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
-        ASSERT_EQUALS("\n\n\n\n", actual[""]);
+        ASSERT_EQUALS("", actual[""]);
     }
 
     void undef4() {
@@ -3452,7 +3452,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
-        ASSERT_EQUALS("\n\n\n\n", actual[""]);
+        ASSERT_EQUALS("", actual[""]);
     }
 
     void undef5() {
@@ -3473,7 +3473,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
-        ASSERT_EQUALS("\n\n\n\n", actual[""]);
+        ASSERT_EQUALS("", actual[""]);
     }
 
     void undef6() {
@@ -3496,7 +3496,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
-        ASSERT_EQUALS("\n\n\n\nBarney & Betty\n\n", actual[""]);
+        ASSERT_EQUALS("\n\n\n\nBarney & Betty", actual[""]);
     }
 
     void undef7() {
@@ -3515,7 +3515,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
-        TODO_ASSERT_EQUALS("\n;","\n$XDefined;\n", actual[""]);
+        ASSERT_EQUALS("\nX ;", actual[""]);
     }
 
     void undef8() {
@@ -3539,7 +3539,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS("[file.c:2]: (information) Include file: \"config.h\" not found.\n", errout.str());
-        ASSERT_EQUALS("\n\n\n\n\n", actual[""]);
+        ASSERT_EQUALS("", actual[""]);
     }
 
     void undef9() {
@@ -3562,7 +3562,7 @@ private:
 
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
-        ASSERT_EQUALS("\n\nFred & Wilma\n\n\n\n", actual[""]);
+        ASSERT_EQUALS("\n\nFred & Wilma", actual[""]);
     }
 
     void undef10() {
