@@ -1842,6 +1842,11 @@ std::string Preprocessor::getcode(const simplecpp::TokenList &tokens1, const std
 
     splitcfg(_settings.userDefines, dui.defines, "1");
     splitcfg(cfg, dui.defines, "");
+
+    for (std::vector<std::string>::const_iterator it = _settings.library.defines.begin(); it != _settings.library.defines.end(); ++it) {
+        dui.defines.push_back(*it);
+    }
+
     if (Path::isCPP(filename))
         dui.defines.push_back("__cplusplus");
 
