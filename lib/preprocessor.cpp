@@ -1844,7 +1844,20 @@ std::string Preprocessor::getcode(const simplecpp::TokenList &tokens1, const std
     splitcfg(cfg, dui.defines, "");
 
     for (std::vector<std::string>::const_iterator it = _settings.library.defines.begin(); it != _settings.library.defines.end(); ++it) {
-        dui.defines.push_back(*it);
+        if (it->compare(0,8,"#define ")!=0)
+            continue;
+        std::string s = it->substr(8);
+        std::string::size_type pos = s.find_first_of(" (");
+        if (pos == std::string::npos) {
+            dui.defines.push_back(s);
+            continue;
+        }
+        if (s[pos] == ' ') {
+            s[pos] = '=';
+        } else {
+            s[s.find(")")+1] = '=';
+        }
+        dui.defines.push_back(s);
     }
 
     if (Path::isCPP(filename))
