@@ -87,6 +87,8 @@ public:
 
     void inlineSuppressions(const simplecpp::TokenList &tokens);
 
+    std::set<std::string> getConfigs(const simplecpp::TokenList &tokens) const;
+
     /**
      * Extract the code for each configuration
      * @param istr The (file/string) stream to read from.

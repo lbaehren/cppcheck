@@ -409,6 +409,127 @@ void Preprocessor::inlineSuppressions(const simplecpp::TokenList &tokens)
     }
 }
 
+static std::string readcondition(const simplecpp::Token *iftok, const std::set<std::string> &defined)
+{
+    const simplecpp::Token *cond = iftok->next;
+    if (!cond)
+        return "";
+
+    if (cond->str == "0")
+        return "0";
+
+    if (cond->name && cond->next && iftok->location.sameline(cond->location) && !iftok->location.sameline(cond->next->location)) {
+        if (defined.find(cond->str) == defined.end())
+            return cond->str;
+    }
+
+    if (cond->op == '(' && cond->next && cond->next->name && cond->next->next && cond->next->next->op == ')') {
+        if (defined.find(cond->next->str) == defined.end())
+            return cond->next->str;
+    }
+
+    if (cond->name && cond->next && cond->next->str == "==" && cond->next->next && cond->next->next->number) {
+        if (defined.find(cond->str) == defined.end())
+            return cond->str + '=' + cond->next->next->str;
+    }
+
+    std::set<std::string> configset;
+    for (; cond && iftok->location.sameline(cond->location); cond = cond->next) {
+        if (cond->op == '!')
+            break;
+        if (cond->str == "defined") {
+            if (!cond->next)
+                break;
+            const simplecpp::Token *dtok = nullptr;
+            if (cond->next->op == '(')
+                dtok = cond->next->next;
+            else if (cond->next->name)
+                dtok = cond->next;
+            if (dtok && dtok->name && defined.find(dtok->str) == defined.end())
+                configset.insert(dtok->str);
+        }
+    }
+    std::string cfg;
+    for (std::set<std::string>::const_iterator it = configset.begin(); it != configset.end(); ++it) {
+        if (!cfg.empty())
+            cfg += ';';
+        cfg += *it;
+    }
+    return cfg;
+}
+
+static std::string cfg(const std::vector<std::string> &configs)
+{
+    std::set<std::string> configs2(configs.begin(), configs.end());
+    std::string ret;
+    for (std::set<std::string>::const_iterator it = configs2.begin(); it != configs2.end(); ++it) {
+        if (it->empty())
+            continue;
+        if (*it == "0")
+            return "";
+        if (!ret.empty())
+            ret += ';';
+        ret += *it;
+    }
+    return ret;
+}
+
+std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &tokens) const
+{
+    std::set<std::string> ret;
+    ret.insert("");
+    simplecpp::TokenList tokens2(tokens);
+    tokens2.removeComments();
+    if (!tokens2.cbegin())
+        return ret;
+
+    std::set<std::string> defined;
+    defined.insert("__cplusplus");
+
+    std::vector<std::string> configs_if;
+    std::vector<std::string> configs_ifndef;
+
+    for (const simplecpp::Token *tok = tokens2.cbegin(); tok; tok = tok->next) {
+        if (tok->op != '#')
+            continue;
+        if (tok->previous && tok->location.sameline(tok->previous->location))
+            continue;
+        if (!tok->next)
+            continue;
+        if (tok->next->str == "ifdef" || tok->next->str == "ifndef" || tok->next->str == "if") {
+            std::string config;
+            if (tok->next->str == "ifdef" || tok->next->str == "ifndef") {
+                if (tok->next->next && tok->next->next->name && tok->location.sameline(tok->next->next->location) && tok->next->next->next && !tok->location.sameline(tok->next->next->next->location))
+                    config = tok->next->next->str;
+                if (defined.find(config) != defined.end())
+                    config.clear();
+            } else if (tok->next->str == "if") {
+                config = readcondition(tok->next, defined);
+            }
+            configs_if.push_back((tok->next->str == "ifndef") ? std::string() : config);
+            configs_ifndef.push_back((tok->next->str == "ifndef") ? config : std::string());
+            ret.insert(cfg(configs_if));
+        } else if (tok->next->str == "elif") {
+            configs_if.pop_back();
+            configs_if.push_back(readcondition(tok->next, defined));
+            ret.insert(cfg(configs_if));
+        } else if (tok->next->str == "else") {
+            configs_if.pop_back();
+            configs_if.push_back(configs_ifndef.back());
+            ret.insert(cfg(configs_if));
+        } else if (tok->next->str == "endif" && tok->location.sameline(tok->next->location)) {
+            if (!configs_if.empty())
+                configs_if.pop_back();
+            if (!configs_ifndef.empty())
+                configs_ifndef.pop_back();
+        } else if (tok->next->str == "define" && tok->next->next && tok->next->next->name && tok->location.sameline(tok->next->next->location)) {
+            defined.insert(tok->next->next->str);
+        }
+    }
+
+    return ret;
+}
+
 std::string Preprocessor::preprocessCleanupDirectives(const std::string &processedFile)
 {
     std::ostringstream code;
