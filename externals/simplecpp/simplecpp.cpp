@@ -1043,6 +1043,31 @@ const simplecpp::Token *gotoNextLine(const simplecpp::Token *tok) {
         tok = tok->next;
     return tok;
 }
+
+std::string openHeader(std::ifstream &f, const simplecpp::DUI &dui, const std::string &sourcefile, const std::string &header) {
+    if (sourcefile.find_first_of("\\/") != std::string::npos) {
+        const std::string s = sourcefile.substr(0, sourcefile.find_last_of("\\/") + 1U) + header;
+        f.open(s);
+        if (f.is_open())
+            return s;
+    } else {
+        f.open(header);
+        if (f.is_open())
+            return header;
+    }
+
+    for (std::list<std::string>::const_iterator it = dui.includePaths.begin(); it != dui.includePaths.end(); ++it) {
+        std::string s = *it;
+        if (!s.empty() && s[s.size()-1U]!='/' && s[s.size()-1U]!='\\')
+            s += '/';
+        s += header;
+        f.open(s);
+        if (f.is_open())
+            return s;
+    }
+
+    return "";
+}
 }
 
 simplecpp::TokenList simplecpp::preprocess(const simplecpp::TokenList &rawtokens, std::vector<std::string> &files, const struct simplecpp::DUI &dui, OutputList *outputList, std::list<struct MacroUsage> *macroUsage)
@@ -1119,10 +1144,11 @@ simplecpp::TokenList simplecpp::preprocess(const simplecpp::TokenList &rawtokens
                 }
             } else if (rawtok->str == INCLUDE) {
                 if (ifstates.top() == TRUE) {
-                    const std::string filename(rawtok->next->str.substr(1U, rawtok->next->str.size() - 2U));
-                    std::ifstream f(filename);
+                    std::ifstream f;
+                    const std::string header(rawtok->next->str.substr(1U, rawtok->next->str.size() - 2U));
+                    const std::string header2 = openHeader(f,dui,rawtok->location.file(),header);
                     if (f.is_open()) {
-                        includes.push_back(TokenList(f, files, filename));
+                        includes.push_back(TokenList(f, files, header2));
                         includetokenstack.push(gotoNextLine(rawtok));
                         rawtok = includes.back().cbegin();
                         continue;
@@ -1140,8 +1166,7 @@ simplecpp::TokenList simplecpp::preprocess(const simplecpp::TokenList &rawtokens
                     conditionIsTrue = (macros.find(rawtok->next->str) == macros.end());
                 else { /*if (rawtok->str == IF || rawtok->str == ELIF)*/
                     TokenList expr(files);
-                    const Token * const endToken = gotoNextLine(rawtok);
-                    for (const Token *tok = rawtok->next; tok != endToken; tok = tok->next) {
+                    for (const Token *tok = rawtok->next; tok && tok->location.sameline(rawtok->location); tok = tok->next) {
                         if (!tok->name) {
                             expr.push_back(new Token(*tok));
                             continue;
