@@ -1062,12 +1062,16 @@ void Preprocessor::removeAsm(std::string &str)
 
 void Preprocessor::preprocess(std::istream &istr, std::map<std::string, std::string> &result, const std::string &filename, const std::list<std::string> &includePaths)
 {
-    std::list<std::string> configs;
-    std::string data;
-    preprocess(istr, data, configs, filename, includePaths);
-    for (std::list<std::string>::const_iterator it = configs.begin(); it != configs.end(); ++it) {
+    simplecpp::OutputList outputList;
+    std::vector<std::string> files;
+    const simplecpp::TokenList tokens1(istr, files, filename, &outputList);
+
+
+    const std::set<std::string> configs = getConfigs(tokens1);
+
+    for (std::set<std::string>::const_iterator it = configs.begin(); it != configs.end(); ++it) {
         if (_settings.userUndefs.find(*it) == _settings.userUndefs.end()) {
-            result[ *it ] = getcode(data, *it, filename);
+            result[ *it ] = getcode(tokens1, *it, files, false);
         }
     }
 }
