@@ -114,9 +114,6 @@ private:
 
         TEST_CASE(elif);
 
-        // Test the Preprocessor::match_cfg_def
-        TEST_CASE(match_cfg_def);
-
         TEST_CASE(if_cond1);
         TEST_CASE(if_cond2);
         TEST_CASE(if_cond3);
@@ -230,8 +227,6 @@ private:
         TEST_CASE(predefine4);
         TEST_CASE(predefine5);  // automatically define __cplusplus
 
-        // Test Preprocessor::simplifyCondition
-        TEST_CASE(simplifyCondition);
         TEST_CASE(invalidElIf); // #2942 segfault
 
         // Using -U to undefine symbols
@@ -767,47 +762,6 @@ private:
             ASSERT_EQUALS("\n\n\nDEF", actual["DEF2"]);
         }
     }
-
-
-
-    void match_cfg_def() {
-        {
-            std::map<std::string, std::string> cfg;
-            ASSERT_EQUALS(false, preprocessor0.match_cfg_def(cfg, "A>1||defined(B)"));
-        }
-
-        {
-            std::map<std::string, std::string> cfg;
-            cfg["A"] = "";
-            cfg["B"] = "";
-            ASSERT_EQUALS(true, preprocessor0.match_cfg_def(cfg, "defined(A)&&defined(B)"));
-        }
-
-        {
-            std::map<std::string, std::string> cfg;
-            cfg["ABC"] = "";
-
-            ASSERT_EQUALS(false, preprocessor0.match_cfg_def(cfg, "defined(A)"));
-            ASSERT_EQUALS(true, preprocessor0.match_cfg_def(cfg, "!defined(A)"));
-
-            ASSERT_EQUALS(false, preprocessor0.match_cfg_def(cfg, "!defined(ABC)&&!defined(DEF)"));
-            ASSERT_EQUALS(true, preprocessor0.match_cfg_def(cfg, "!defined(A)&&!defined(B)"));
-        }
-
-        {
-            std::map<std::string, std::string> cfg;
-            cfg["A"] = "1";
-            cfg["B"] = "2";
-
-            ASSERT_EQUALS(true, preprocessor0.match_cfg_def(cfg, "A==1"));
-            ASSERT_EQUALS(true, preprocessor0.match_cfg_def(cfg, "A<2"));
-            ASSERT_EQUALS(false, preprocessor0.match_cfg_def(cfg, "A==2"));
-            ASSERT_EQUALS(false, preprocessor0.match_cfg_def(cfg, "A<1"));
-            ASSERT_EQUALS(false, preprocessor0.match_cfg_def(cfg, "A>=1&&B<=A"));
-            ASSERT_EQUALS(true, preprocessor0.match_cfg_def(cfg, "A==1 && A==1"));
-        }
-    }
-
 
     void if_cond1() {
         const char filedata[] = "#if LIBVER>100\n"
@@ -2479,15 +2433,6 @@ private:
         ASSERT_EQUALS(true, Preprocessor::cplusplus(&settings,"test.cpp"));
         settings.userUndefs.insert("__cplusplus");
         ASSERT_EQUALS(false, Preprocessor::cplusplus(&settings,"test.cpp"));
-    }
-
-    void simplifyCondition() {
-        // Ticket #2794
-        std::map<std::string, std::string> cfg;
-        cfg["C"] = "";
-        std::string condition("defined(A) || defined(B) || defined(C)");
-        preprocessor0.simplifyCondition(cfg, condition, true);
-        ASSERT_EQUALS("1", condition);
     }
 
     void invalidElIf() {

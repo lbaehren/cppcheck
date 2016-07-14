@@ -175,71 +175,6 @@ std::string Preprocessor::read(std::istream &istr, const std::string &filename)
 }
 
 
-/** read preprocessor statements */
-std::string Preprocessor::readpreprocessor(std::istream &istr, const unsigned int bom)
-{
-    enum { NEWLINE, SPACE, PREPROCESSOR, BACKSLASH, OTHER } state = NEWLINE;
-    std::ostringstream code;
-    unsigned int newlines = 1;
-    unsigned char chPrev = ' ';
-    for (unsigned char ch = readChar(istr,bom); istr.good(); ch = readChar(istr,bom)) {
-        // Replace assorted special chars with spaces..
-        if (((ch & 0x80) == 0) && (ch != '\n') && (std::isspace(ch) || std::iscntrl(ch)))
-            ch = ' ';
-
-        if (ch == ' ' && chPrev == ' ')
-            continue;
-        if (state == PREPROCESSOR && chPrev == '/' && (ch == '/' || ch == '*'))
-            state = OTHER;
-        chPrev = ch;
-
-        if (ch == '\n') {
-            if (state != BACKSLASH) {
-                state = NEWLINE;
-                code << std::string(newlines, '\n');
-                newlines = 1;
-            } else {
-                ++newlines;
-                state = PREPROCESSOR;
-            }
-            continue;
-        }
-
-        switch (state) {
-        case NEWLINE:
-            if (ch==' ')
-                state = SPACE;
-            else if (ch == '#') {
-                state = PREPROCESSOR;
-                code << ch;
-            } else
-                state = OTHER;
-            break;
-        case SPACE:
-            if (ch == '#') {
-                state = PREPROCESSOR;
-                code << ch;
-            } else if (ch != ' ')
-                state = OTHER;
-            break;
-        case PREPROCESSOR:
-            code << ch;
-            if (ch == '\\')
-                state = BACKSLASH;
-            break;
-        case BACKSLASH:
-            code << ch;
-            if (ch != ' ')
-                state = PREPROCESSOR;
-            break;
-        case OTHER:
-            break;
-        };
-    }
-
-    std::string result = preprocessCleanupDirectives(code.str());
-    return result;
-}
 
 void Preprocessor::inlineSuppressions(const simplecpp::TokenList &tokens)
 {
@@ -689,137 +624,6 @@ static void simplifyVarMap(std::map<std::string, std::string> &variables, const 
     }
 }
 
-void Preprocessor::simplifyCondition(const std::map<std::string, std::string> &cfg, std::string &condition, bool match)
-{
-    Tokenizer tokenizer(&_settings, _errorLogger);
-    if (!tokenizer.tokenizeCondition("(" + condition + ")")) {
-        // If tokenize returns false, then there is syntax error in the
-        // code which we can't handle. So stop here.
-        return;
-    }
-
-    if (Token::Match(tokenizer.tokens(), "( %name% )")) {
-        std::map<std::string,std::string>::const_iterator var = cfg.find(tokenizer.tokens()->strAt(1));
-        if (var != cfg.end()) {
-            const std::string &value = var->second;
-            condition = (value == "0") ? "0" : "1";
-        } else if (match)
-            condition = "0";
-        return;
-    }
-
-    if (Token::Match(tokenizer.tokens(), "( ! %name% )")) {
-        std::map<std::string,std::string>::const_iterator var = cfg.find(tokenizer.tokens()->strAt(2));
-
-        if (var == cfg.end())
-            condition = "1";
-        else if (var->second == "0")
-            condition = "1";
-        else if (match)
-            condition = "0";
-        return;
-    }
-
-    // replace variable names with values..
-    for (Token *tok = const_cast<Token *>(tokenizer.tokens()); tok; tok = tok->next()) {
-        if (!tok->isName())
-            continue;
-
-        if (Token::Match(tok, "defined ( %name% )")) {
-            if (cfg.find(tok->strAt(2)) != cfg.end())
-                tok->str("1");
-            else if (match)
-                tok->str("0");
-            else
-                continue;
-            tok->deleteNext(3);
-            continue;
-        }
-
-        if (Token::Match(tok, "defined %name%")) {
-            if (cfg.find(tok->strAt(1)) != cfg.end())
-                tok->str("1");
-            else if (match)
-                tok->str("0");
-            else
-                continue;
-            tok->deleteNext();
-            continue;
-        }
-
-        const std::map<std::string, std::string>::const_iterator it = cfg.find(tok->str());
-        if (it != cfg.end()) {
-            if (!it->second.empty()) {
-                // Tokenize the value
-                Tokenizer tokenizer2(&_settings, _errorLogger);
-                tokenizer2.tokenizeCondition(it->second);
-
-                // Copy the value tokens
-                std::stack<Token *> link;
-                for (const Token *tok2 = tokenizer2.tokens(); tok2; tok2 = tok2->next()) {
-                    tok->str(tok2->str());
-
-                    if (Token::Match(tok2,"[{([]"))
-                        link.push(tok);
-                    else if (!link.empty() && Token::Match(tok2,"[})]]")) {
-                        Token::createMutualLinks(link.top(), tok);
-                        link.pop();
-                    }
-
-                    if (tok2->next()) {
-                        tok->insertToken("");
-                        tok = tok->next();
-                    }
-                }
-            } else if ((!tok->previous() || Token::Match(tok->previous(), "&&|%oror%|(")) &&
-                       (!tok->next() || Token::Match(tok->next(), "&&|%oror%|)")))
-                tok->str("1");
-            else
-                tok->deleteThis();
-        }
-    }
-
-    // simplify calculations..
-    tokenizer.concatenateNegativeNumberAndAnyPositive();
-    bool modified = true;
-    while (modified) {
-        modified = false;
-        modified |= tokenizer.simplifySizeof();
-        modified |= tokenizer.simplifyCalculations();
-        modified |= tokenizer.simplifyConstTernaryOp();
-        modified |= tokenizer.simplifyRedundantParentheses();
-        for (Token *tok = const_cast<Token *>(tokenizer.tokens()); tok; tok = tok->next()) {
-            if (Token::Match(tok, "! %num%")) {
-                tok->deleteThis();
-                tok->str(tok->str() == "0" ? "1" : "0");
-                modified = true;
-            }
-        }
-    }
-
-    for (Token *tok = const_cast<Token *>(tokenizer.tokens()); tok; tok = tok->next()) {
-        if (Token::Match(tok, "(|%oror%|&& %num% &&|%oror%|)")) {
-            if (tok->next()->str() != "0") {
-                tok->next()->str("1");
-            }
-        }
-    }
-
-    for (Token *tok = const_cast<Token *>(tokenizer.tokens()); tok; tok = tok->next()) {
-        while (Token::Match(tok, "(|%oror% %any% %oror% 1")) {
-            tok->deleteNext(2);
-            if (tok->tokAt(-3))
-                tok = tok->tokAt(-3);
-        }
-    }
-
-    if (Token::simpleMatch(tokenizer.tokens(), "( 1 )") ||
-        Token::simpleMatch(tokenizer.tokens(), "( 1 ||"))
-        condition = "1";
-    else if (Token::simpleMatch(tokenizer.tokens(), "( 0 )"))
-        condition = "0";
-}
-
 bool Preprocessor::match_cfg_def(std::map<std::string, std::string> cfg, std::string def)
 {
     /*
@@ -836,7 +640,7 @@ bool Preprocessor::match_cfg_def(std::map<std::string, std::string> cfg, std::st
     */
 
     simplifyVarMap(cfg, _settings);
-    simplifyCondition(cfg, def, true);
+
 
     if (cfg.find(def) != cfg.end())
         return true;

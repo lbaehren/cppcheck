@@ -124,9 +124,6 @@ public:
     /** Just read the code into a string. Perform simple cleanup of the code */
     std::string read(std::istream &istr, const std::string &filename);
 
-    /** read preprocessor statements into a string. */
-    static std::string readpreprocessor(std::istream &istr, const unsigned int bom);
-
     /** should __cplusplus be defined? */
     static bool cplusplus(const Settings *settings, const std::string &filename);
 
@@ -139,14 +136,6 @@ public:
      * @param filename name of source file
      */
     std::string getcode(const std::string &filedata, const std::string &cfg, const std::string &filename);
-
-    /**
-     * simplify condition
-     * @param variables Variable values
-     * @param condition The condition to simplify
-     * @param match if true, 'defined(A)' is replaced with 0 if A is not defined
-     */
-    void simplifyCondition(const std::map<std::string, std::string> &variables, std::string &condition, bool match);
 
     /**
      * preprocess all whitespaces
