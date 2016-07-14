@@ -2423,14 +2423,6 @@ private:
         Settings settings;
         ASSERT_EQUALS("",      preprocessor0.getcode(code, "X=123", "test.c"));
         ASSERT_EQUALS("\n123", preprocessor0.getcode(code, "X=123", "test.cpp"));
-
-        // #5119...
-        ASSERT_EQUALS(false, Preprocessor::cplusplus(nullptr,"test.c"));
-        ASSERT_EQUALS(true, Preprocessor::cplusplus(nullptr,"test.cpp"));
-
-        ASSERT_EQUALS(true, Preprocessor::cplusplus(&settings,"test.cpp"));
-        settings.userUndefs.insert("__cplusplus");
-        ASSERT_EQUALS(false, Preprocessor::cplusplus(&settings,"test.cpp"));
     }
 
     void invalidElIf() {

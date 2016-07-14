@@ -51,19 +51,6 @@ Directive::Directive(const std::string &_file, const int _linenr, const std::str
     linenr(_linenr),
     str(_str)
 {
-    // strip C++ comment if there is one
-    std::size_t pos = str.find("//");
-    if (pos != std::string::npos)
-        str.erase(pos);
-    // strip any C comments
-    while ((pos = str.find("/*")) != std::string::npos) {
-        std::size_t end = str.find("*/", pos+2);
-        if (end != std::string::npos) {
-            str.erase(pos, end + 2 - pos);
-        } else { // treat '/*' as '//' if '*/' is missing
-            str.erase(pos);
-        }
-    }
     str = trim(str);
 }
 
@@ -91,87 +78,6 @@ void Preprocessor::writeError(const std::string &fileName, const unsigned int li
                            errorType,
                            false));
 }
-
-static unsigned char readChar(std::istream &istr, unsigned int bom)
-{
-    unsigned char ch = (unsigned char)istr.get();
-
-    // For UTF-16 encoded files the BOM is 0xfeff/0xfffe. If the
-    // character is non-ASCII character then replace it with 0xff
-    if (bom == 0xfeff || bom == 0xfffe) {
-        const unsigned char ch2 = (unsigned char)istr.get();
-        const int ch16 = (bom == 0xfeff) ? (ch<<8 | ch2) : (ch2<<8 | ch);
-        ch = (unsigned char)((ch16 >= 0x80) ? 0xff : ch16);
-    }
-
-    // Handling of newlines..
-    if (ch == '\r') {
-        ch = '\n';
-        if (bom == 0 && (char)istr.peek() == '\n')
-            (void)istr.get();
-        else if (bom == 0xfeff || bom == 0xfffe) {
-            int c1 = istr.get();
-            int c2 = istr.get();
-            int ch16 = (bom == 0xfeff) ? (c1<<8 | c2) : (c2<<8 | c1);
-            if (ch16 != '\n') {
-                istr.unget();
-                istr.unget();
-            }
-        }
-    }
-
-    return ch;
-}
-
-// Concatenates a list of strings, inserting a separator between parts
-static std::string join(const std::set<std::string>& list, char separator)
-{
-    std::string s;
-    for (std::set<std::string>::const_iterator it = list.begin(); it != list.end(); ++it) {
-        if (!s.empty())
-            s += separator;
-
-        s += *it;
-    }
-    return s;
-}
-
-// Removes duplicate string portions separated by the specified separator
-static std::string unify(const std::string &s, char separator)
-{
-    std::set<std::string> parts;
-
-    std::string::size_type prevPos = 0;
-    for (std::string::size_type pos = 0; pos < s.length(); ++pos) {
-        if (s[pos] == separator) {
-            if (pos > prevPos)
-                parts.insert(s.substr(prevPos, pos - prevPos));
-            prevPos = pos + 1;
-        }
-    }
-    if (prevPos < s.length())
-        parts.insert(s.substr(prevPos));
-
-    return join(parts, separator);
-}
-
-
-bool Preprocessor::cplusplus(const Settings *settings, const std::string &filename)
-{
-    const bool undef   = settings && settings->userUndefs.find("__cplusplus") != settings->userUndefs.end();
-    const bool cpplang = settings && settings->enforcedLang == Settings::CPP;
-    const bool cppfile = (!settings || settings->enforcedLang == Settings::None) && Path::isCPP(filename);
-    return (!undef && (cpplang || cppfile));
-}
-
-/** Just read the code into a string. Perform simple cleanup of the code */
-std::string Preprocessor::read(std::istream &istr, const std::string &filename)
-{
-    (void)istr;
-    (void)filename;
-    return "";
-}
-
 
 
 void Preprocessor::inlineSuppressions(const simplecpp::TokenList &tokens)
