@@ -183,13 +183,6 @@ public:
     void replaceIfDefined(std::string &str) const;
 
     /**
-     * Cleanup 'if 0' from the code
-     * @param code Code processed by read().
-     * @return code without 'if 0'
-     */
-    static std::string removeIf0(const std::string &code);
-
-    /**
      * Remove redundant parentheses from preprocessor commands. This should only be called from read().
      * @param str Code processed by read().
      * @return code with reduced parentheses

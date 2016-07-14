@@ -239,7 +239,7 @@ std::string Preprocessor::readpreprocessor(std::istream &istr, const unsigned in
 
     std::string result = preprocessCleanupDirectives(code.str());
     result = removeParentheses(result);
-    return removeIf0(result);
+    return result;
 }
 
 void Preprocessor::inlineSuppressions(const simplecpp::TokenList &tokens)
@@ -494,43 +494,6 @@ static bool hasbom(const std::string &str)
                 static_cast<unsigned char>(str[1]) == 0xbb &&
                 static_cast<unsigned char>(str[2]) == 0xbf);
 }
-
-
-std::string Preprocessor::removeIf0(const std::string &code)
-{
-    std::ostringstream ret;
-    std::istringstream istr(code);
-    std::string line;
-    while (std::getline(istr,line)) {
-        ret << line << "\n";
-        if (line == "#if 0") {
-            // goto the end of the '#if 0' block
-            unsigned int level = 1;
-            bool in = false;
-            while (level > 0 && std::getline(istr,line)) {
-                if (line.compare(0,3,"#if") == 0)
-                    ++level;
-                else if (line == "#endif")
-                    --level;
-                else if ((line == "#else") || (line.compare(0, 5, "#elif") == 0)) {
-                    if (level == 1)
-                        in = true;
-                } else {
-                    if (in)
-                        ret << line << "\n";
-                    else
-                        // replace code within '#if 0' block with empty lines
-                        ret << "\n";
-                    continue;
-                }
-
-                ret << line << "\n";
-            }
-        }
-    }
-    return ret.str();
-}
-
 
 std::string Preprocessor::removeParentheses(const std::string &str)
 {
