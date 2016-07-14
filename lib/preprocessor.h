@@ -183,15 +183,6 @@ public:
     void replaceIfDefined(std::string &str) const;
 
     /**
-     * Remove comments from code. This should only be called from read().
-     * If there are inline suppressions, the _settings member is modified
-     * @param str Code processed by read().
-     * @param filename filename
-     * @return code without comments
-     */
-    std::string removeComments(const std::string &str, const std::string &filename);
-
-    /**
      * Cleanup 'if 0' from the code
      * @param code Code processed by read().
      * @return code without 'if 0'
