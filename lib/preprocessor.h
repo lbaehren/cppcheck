@@ -225,12 +225,6 @@ public:
     std::list<std::string> getcfgs(const std::string &filedata, const std::string &filename, const std::map<std::string, std::string> &defs);
 
     /**
-     * Remove asm(...) from a string
-     * @param str Code
-     */
-    static void removeAsm(std::string &str);
-
-    /**
      * Evaluate condition 'numerically'
      * @param cfg configuration
      * @param def condition

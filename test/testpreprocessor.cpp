@@ -146,8 +146,6 @@ private:
         TEST_CASE(ticket_3699);
         TEST_CASE(ticket_4922); // #4922
 
-        TEST_CASE(remove_asm);
-
         TEST_CASE(if_defined);      // "#if defined(AAA)" => "#ifdef AAA"
         TEST_CASE(if_not_defined);  // "#if !defined(AAA)" => "#ifndef AAA"
 
@@ -1264,16 +1262,6 @@ private:
                            "__typeof __finite (__finite) __finite __inline \"__GI___finite\");";
         std::map<std::string, std::string> actual;
         preprocess(code, actual);
-    }
-
-    void remove_asm() const {
-        std::string str1("#asm\nmov ax,bx\n#endasm");
-        Preprocessor::removeAsm(str1);
-        ASSERT_EQUALS("asm(\nmov ax,bx\n);", str1);
-
-        std::string str2("\n#asm\nmov ax,bx\n#endasm\n");
-        Preprocessor::removeAsm(str2);
-        ASSERT_EQUALS("\nasm(\nmov ax,bx\n);\n", str2);
     }
 
     void if_defined() const {

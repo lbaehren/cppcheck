@@ -486,21 +486,6 @@ std::string Preprocessor::preprocessCleanupDirectives(const std::string &process
     return code.str();
 }
 
-void Preprocessor::removeAsm(std::string &str)
-{
-    std::string::size_type pos = 0;
-    while ((pos = str.find("#asm\n", pos)) != std::string::npos) {
-        str.replace(pos, 4, "asm(");
-
-        std::string::size_type pos2 = str.find("#endasm", pos);
-        if (pos2 != std::string::npos) {
-            str.replace(pos2, 7, ");");
-            pos = pos2;
-        }
-    }
-}
-
-
 void Preprocessor::preprocess(std::istream &istr, std::map<std::string, std::string> &result, const std::string &filename, const std::list<std::string> &includePaths)
 {
     (void)includePaths;
