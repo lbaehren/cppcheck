@@ -624,36 +624,6 @@ static void simplifyVarMap(std::map<std::string, std::string> &variables, const 
     }
 }
 
-bool Preprocessor::match_cfg_def(std::map<std::string, std::string> cfg, std::string def)
-{
-    /*
-        std::cout << "cfg: \"";
-        for (std::map<std::string, std::string>::const_iterator it = cfg.begin(); it != cfg.end(); ++it)
-        {
-            std::cout << it->first;
-            if (!it->second.empty())
-                std::cout << "=" << it->second;
-            std::cout << ";";
-        }
-        std::cout << "\"  ";
-        std::cout << "def: \"" << def << "\"\n";
-    */
-
-    simplifyVarMap(cfg, _settings);
-
-
-    if (cfg.find(def) != cfg.end())
-        return true;
-
-    if (def == "0")
-        return false;
-
-    if (def == "1")
-        return true;
-
-    return false;
-}
-
 static void splitcfg(const std::string &cfg, std::list<std::string> &defines, const std::string &defaultValue)
 {
     for (std::string::size_type pos1 = 0U; pos1 < cfg.size();) {

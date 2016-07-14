@@ -201,14 +201,6 @@ private:
 public:
 
 
-    /**
-     * Evaluate condition 'numerically'
-     * @param cfg configuration
-     * @param def condition
-     * @return result when evaluating the condition
-     */
-    bool match_cfg_def(std::map<std::string, std::string> cfg, std::string def);
-
     static void getErrorMessages(ErrorLogger *errorLogger, const Settings *settings);
 
     void setFile0(const std::string &f) {
