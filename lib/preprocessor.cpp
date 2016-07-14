@@ -401,9 +401,21 @@ void Preprocessor::inlineSuppressions(const simplecpp::TokenList &tokens)
         if (suppressionIDs.empty())
             continue;
 
+        // Relative filename
+        std::string relativeFilename(tok->location.file());
+        if (_settings.relativePaths) {
+            for (std::size_t j = 0U; j < _settings.basePaths.size(); ++j) {
+                const std::string bp = _settings.basePaths[j] + "/";
+                if (relativeFilename.compare(0,bp.size(),bp)==0) {
+                    relativeFilename = relativeFilename.substr(bp.size());
+                }
+            }
+        }
+
+
         // Add the suppressions.
         for (std::list<std::string>::const_iterator it = suppressionIDs.begin(); it != suppressionIDs.end(); ++it) {
-            _settings.nomsg.addSuppression(*it, tok->location.file(), tok->location.line);
+            _settings.nomsg.addSuppression(*it, relativeFilename, tok->location.line);
         }
         suppressionIDs.clear();
     }
