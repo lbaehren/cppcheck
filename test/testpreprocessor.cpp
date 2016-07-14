@@ -239,8 +239,6 @@ private:
         TEST_CASE(undef7);
         TEST_CASE(undef9);
 
-        TEST_CASE(handleUndef);
-
         TEST_CASE(validateCfg);
 
         TEST_CASE(if_sizeof);
@@ -2608,32 +2606,6 @@ private:
         // Compare results..
         ASSERT_EQUALS(1U, actual.size());
         ASSERT_EQUALS("\n\nFred & Wilma", actual[""]);
-    }
-
-    void handleUndef() {
-        Settings settings;
-        settings.userUndefs.insert("X");
-        const Preprocessor preprocessor(settings, this);
-        std::list<std::string> configurations;
-
-        // configurations to keep
-        configurations.clear();
-        configurations.push_back("XY;");
-        configurations.push_back("AX;");
-        configurations.push_back("A;XY");
-        preprocessor.handleUndef(configurations);
-        ASSERT_EQUALS(3U, configurations.size());
-
-        // configurations to remove
-        configurations.clear();
-        configurations.push_back("X;Y");
-        configurations.push_back("X=1;Y");
-        configurations.push_back("A;X;B");
-        configurations.push_back("A;X=1;B");
-        configurations.push_back("A;X");
-        configurations.push_back("A;X=1");
-        preprocessor.handleUndef(configurations);
-        ASSERT_EQUALS(0U, configurations.size());
     }
 
     void validateCfg() {

@@ -152,8 +152,6 @@ public:
     bool validateCfg(const std::string &code, const std::string &cfg);
     void validateCfgError(const std::string &cfg, const std::string &macro);
 
-    void handleUndef(std::list<std::string> &configurations) const;
-
     /**
      * report error
      * @param fileName name of file that the error was found in
