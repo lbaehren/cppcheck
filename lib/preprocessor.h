@@ -176,13 +176,6 @@ public:
     static void writeError(const std::string &fileName, const unsigned int linenr, ErrorLogger *errorLogger, const std::string &errorType, const std::string &errorText);
 
     /**
-     * Replace "#if defined" with "#ifdef" where possible
-     *
-     * @param str The string to be converted
-     */
-    void replaceIfDefined(std::string &str) const;
-
-    /**
      * Remove redundant parentheses from preprocessor commands. This should only be called from read().
      * @param str Code processed by read().
      * @return code with reduced parentheses

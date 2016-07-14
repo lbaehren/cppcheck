@@ -42,12 +42,6 @@ public:
 
     class OurPreprocessor : public Preprocessor {
     public:
-        static std::string replaceIfDefined(std::string str) {
-            Settings settings;
-            Preprocessor p(settings);
-            p.replaceIfDefined(str);
-            return str;
-        }
 
         static std::string expandMacros(const char code[], ErrorLogger *errorLogger = 0) {
             std::istringstream istr(code);
@@ -145,9 +139,6 @@ private:
         TEST_CASE(ticket_3675);
         TEST_CASE(ticket_3699);
         TEST_CASE(ticket_4922); // #4922
-
-        TEST_CASE(if_defined);      // "#if defined(AAA)" => "#ifdef AAA"
-        TEST_CASE(if_not_defined);  // "#if !defined(AAA)" => "#ifndef AAA"
 
         // Macros..
         TEST_CASE(macro_simple1);
@@ -1262,25 +1253,6 @@ private:
         std::map<std::string, std::string> actual;
         preprocess(code, actual);
     }
-
-    void if_defined() const {
-        {
-            const char filedata[] = "#if defined(AAA)\n"
-                                    "#endif\n";
-            ASSERT_EQUALS("#ifdef AAA\n#endif\n", OurPreprocessor::replaceIfDefined(filedata));
-        }
-
-        {
-            ASSERT_EQUALS("#elif A\n", OurPreprocessor::replaceIfDefined("#elif defined(A)\n"));
-        }
-    }
-
-    void if_not_defined() const {
-        const char filedata[] = "#if !defined(AAA)\n"
-                                "#endif\n";
-        ASSERT_EQUALS("#ifndef AAA\n#endif\n", OurPreprocessor::replaceIfDefined(filedata));
-    }
-
 
     void macro_simple1() const {
         {

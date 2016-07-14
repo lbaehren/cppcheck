@@ -525,56 +525,6 @@ std::string Preprocessor::removeSpaceNearNL(const std::string &str)
     return tmp;
 }
 
-void Preprocessor::replaceIfDefined(std::string &str) const
-{
-    std::string::size_type pos = 0;
-    while ((pos = str.find("#if defined(", pos)) != std::string::npos) {
-        std::string::size_type pos2 = str.find(')', pos + 9);
-        if (pos2 > str.length() - 1)
-            break;
-        if (str[pos2+1] == '\n') {
-            str.erase(pos2, 1);
-            str.erase(pos + 3, 9);
-            str.insert(pos + 3, "def ");
-        }
-        ++pos;
-
-        if (_settings.terminated())
-            return;
-    }
-
-    pos = 0;
-    while ((pos = str.find("#if !defined(", pos)) != std::string::npos) {
-        std::string::size_type pos2 = str.find(')', pos + 9);
-        if (pos2 > str.length() - 1)
-            break;
-        if (str[pos2+1] == '\n') {
-            str.erase(pos2, 1);
-            str.erase(pos + 3, 10);
-            str.insert(pos + 3, "ndef ");
-        }
-        ++pos;
-
-        if (_settings.terminated())
-            return;
-    }
-
-    pos = 0;
-    while ((pos = str.find("#elif defined(", pos)) != std::string::npos) {
-        std::string::size_type pos2 = str.find(')', pos + 9);
-        if (pos2 > str.length() - 1)
-            break;
-        if (str[pos2+1] == '\n') {
-            str.erase(pos2, 1);
-            str.erase(pos + 6, 8);
-        }
-        ++pos;
-
-        if (_settings.terminated())
-            return;
-    }
-}
-
 void Preprocessor::preprocessWhitespaces(std::string &processedFile)
 {
     // Replace all tabs with spaces..
