@@ -238,6 +238,31 @@ std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &token
                 configs_ifndef.pop_back();
         } else if (tok->next->str == "define" && tok->next->next && tok->next->next->name && tok->location.sameline(tok->next->next->location)) {
             defined.insert(tok->next->next->str);
+        } else if (tok->next->str == "include") {
+            if (tok->next->next && tok->location.sameline(tok->next->next->location)) {
+                if (tok->next->next->name || tok->next->next->str[0] == '<') {
+                    std::string filename = tok->next->next->str;
+                    filename = filename.substr(1, filename.size() - 2U);
+                    std::ifstream f(filename);
+                    if (f.is_open()) {
+                        std::vector<std::string> files;
+                        const simplecpp::TokenList htokens(f, files);
+                        std::set<std::string> hconfigs(getConfigs(htokens));
+                        for (unsigned int i = 0; i < configs_if.size(); ++i)
+                            hconfigs.insert(configs_if[i]);
+                        std::string s;
+                        for (std::set<std::string>::const_iterator it = hconfigs.begin(); it != hconfigs.end(); ++it) {
+                            if (it->empty())
+                                continue;
+                            if (!s.empty())
+                                s += ';';
+                            s += *it;
+
+                        }
+                        ret.insert(s);
+                    }
+                }
+            }
         }
     }
 
