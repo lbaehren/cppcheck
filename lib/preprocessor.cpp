@@ -166,148 +166,12 @@ bool Preprocessor::cplusplus(const Settings *settings, const std::string &filena
     return (!undef && (cpplang || cppfile));
 }
 
-/**
- * Get cfgmap - a map of macro names and values
- */
-static std::map<std::string,std::string> getcfgmap(const std::string &cfg, const Settings *settings, const std::string &filename)
-{
-    std::map<std::string, std::string> cfgmap;
-
-    if (!cfg.empty()) {
-        std::string::size_type pos = 0;
-        for (;;) {
-            std::string::size_type pos2 = cfg.find_first_of(";=", pos);
-            if (pos2 == std::string::npos) {
-                cfgmap[cfg.substr(pos)] = "";
-                break;
-            }
-            if (cfg[pos2] == ';') {
-                cfgmap[cfg.substr(pos, pos2-pos)] = "";
-            } else {
-                std::string::size_type pos3 = pos2;
-                pos2 = cfg.find(';', pos2);
-                if (pos2 == std::string::npos) {
-                    cfgmap[cfg.substr(pos, pos3-pos)] = cfg.substr(pos3 + 1);
-                    break;
-                } else {
-                    cfgmap[cfg.substr(pos, pos3-pos)] = cfg.substr(pos3 + 1, pos2 - pos3 - 1);
-                }
-            }
-            pos = pos2 + 1;
-        }
-    }
-
-    if (cfgmap.find("__cplusplus") == cfgmap.end() && Preprocessor::cplusplus(settings,filename))
-        cfgmap["__cplusplus"] = "1";
-
-    return cfgmap;
-}
-
-
 /** Just read the code into a string. Perform simple cleanup of the code */
 std::string Preprocessor::read(std::istream &istr, const std::string &filename)
 {
-    // The UTF-16 BOM is 0xfffe or 0xfeff.
-    unsigned int bom = 0;
-    if (istr.peek() >= 0xfe) {
-        bom = ((unsigned char)istr.get() << 8);
-        if (istr.peek() >= 0xfe)
-            bom |= (unsigned char)istr.get();
-        else
-            bom = 0; // allowed boms are 0/0xfffe/0xfeff
-    }
-
-    if (_settings.terminated())
-        return "";
-
-    if (_settings.checkConfiguration)
-        return readpreprocessor(istr,bom);
-
-    // ------------------------------------------------------------------------------------------
-    //
-    // handling <backslash><newline>
-    // when this is encountered the <backslash><newline> will be "skipped".
-    // on the next <newline>, extra newlines will be added
-    std::ostringstream code;
-    unsigned int newlines = 0;
-    for (unsigned char ch = readChar(istr,bom); istr.good(); ch = readChar(istr,bom)) {
-        // Replace assorted special chars with spaces..
-        if (((ch & 0x80) == 0) && (ch != '\n') && (std::isspace(ch) || std::iscntrl(ch)))
-            ch = ' ';
-
-        // <backslash><newline>..
-        // for gcc-compatibility the trailing spaces should be ignored
-        // for vs-compatibility the trailing spaces should be kept
-        // See tickets #640 and #1869
-        // The solution for now is to have a compiler-dependent behaviour.
-        if (ch == '\\') {
-            unsigned char chNext;
-
-            std::string spaces;
-
-#ifdef __GNUC__
-            // gcc-compatibility: ignore spaces
-            for (;; spaces += ' ') {
-                chNext = (unsigned char)istr.peek();
-                if (chNext != '\n' && chNext != '\r' &&
-                    (std::isspace(chNext) || std::iscntrl(chNext))) {
-                    // Skip whitespace between <backslash> and <newline>
-                    (void)readChar(istr,bom);
-                    continue;
-                }
-
-                break;
-            }
-#else
-            // keep spaces
-            chNext = (unsigned char)istr.peek();
-#endif
-            if (chNext == '\n' || chNext == '\r') {
-                ++newlines;
-                (void)readChar(istr,bom);   // Skip the "<backslash><newline>"
-            } else {
-                code << "\\" << spaces;
-            }
-        } else {
-            code << char(ch);
-
-            // if there has been <backslash><newline> sequences, add extra newlines..
-            if (ch == '\n' && newlines > 0) {
-                code << std::string(newlines, '\n');
-                newlines = 0;
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------------------------------
-    //
-    // Remove all comments..
-    std::string result = removeComments(code.str(), filename);
-    if (_settings.terminated())
-        return "";
-    code.str("");
-
-    // ------------------------------------------------------------------------------------------
-    //
-    // Clean up all preprocessor statements
-    result = preprocessCleanupDirectives(result);
-    if (_settings.terminated())
-        return "";
-
-    // ------------------------------------------------------------------------------------------
-    //
-    // Clean up preprocessor #if statements with Parentheses
-    result = removeParentheses(result);
-    if (_settings.terminated())
-        return "";
-
-    // Remove '#if 0' blocks
-    if (result.find("#if 0\n") != std::string::npos)
-        result = removeIf0(result);
-    if (_settings.terminated())
-        return "";
-
-    return result;
+    (void)istr;
+    (void)filename;
+    return "";
 }
 
 
@@ -1062,6 +926,8 @@ void Preprocessor::removeAsm(std::string &str)
 
 void Preprocessor::preprocess(std::istream &istr, std::map<std::string, std::string> &result, const std::string &filename, const std::list<std::string> &includePaths)
 {
+    (void)includePaths;
+
     simplecpp::OutputList outputList;
     std::vector<std::string> files;
     const simplecpp::TokenList tokens1(istr, files, filename, &outputList);
@@ -1158,102 +1024,20 @@ void Preprocessor::preprocessWhitespaces(std::string &processedFile)
 
 void Preprocessor::preprocess(std::istream &srcCodeStream, std::string &processedFile, std::list<std::string> &resultConfigurations, const std::string &filename, const std::list<std::string> &includePaths)
 {
-    std::string forcedIncludes;
+    (void)includePaths;
 
     if (file0.empty())
         file0 = filename;
 
-    processedFile = read(srcCodeStream, filename);
+    simplecpp::OutputList outputList;
+    std::vector<std::string> files;
+    const simplecpp::TokenList tokens1(srcCodeStream, files, filename, &outputList);
 
-    for (std::list<std::string>::iterator it = _settings.userIncludes.begin();
-         it != _settings.userIncludes.end();
-         ++it) {
-        const std::string& cur = *it;
+    const std::set<std::string> configs = getConfigs(tokens1);
+    for (std::set<std::string>::const_iterator it = configs.begin(); it != configs.end(); ++it)
+        resultConfigurations.push_back(*it);
 
-        // try to open file
-        std::ifstream fin;
-
-        fin.open(cur.c_str());
-        if (!fin.is_open()) {
-            missingInclude(cur,
-                           1,
-                           cur,
-                           UserHeader
-                          );
-            continue;
-        }
-        const std::string fileData = read(fin, filename);
-
-        fin.close();
-
-        forcedIncludes +=
-            "#file \"" + cur + "\"\n" +
-            fileData + "\n" +
-            "#endfile\n"
-            ;
-    }
-
-    for (std::vector<std::string>::iterator it = _settings.library.defines.begin();
-         it != _settings.library.defines.end();
-         ++it) {
-        forcedIncludes += *it;
-    }
-
-    if (!forcedIncludes.empty()) {
-        processedFile =
-            forcedIncludes +
-            "#file \"" + filename + "\"\n" +
-            processedFile +
-            "#endfile\n"
-            ;
-    }
-
-    // Remove asm(...)
-    removeAsm(processedFile);
-
-    // Replace "defined A" with "defined(A)"
-    {
-        std::istringstream istr(processedFile);
-        std::ostringstream ostr;
-        std::string line;
-        while (std::getline(istr, line)) {
-            if (line.compare(0, 4, "#if ") == 0 || line.compare(0, 6, "#elif ") == 0) {
-                std::string::size_type pos = 0;
-                while ((pos = line.find(" defined ")) != std::string::npos) {
-                    line[pos+8] = '(';
-                    pos = line.find_first_of(" |&", pos + 8);
-                    if (pos == std::string::npos)
-                        line += ")";
-                    else
-                        line.insert(pos, ")");
-
-                    if (_settings.terminated())
-                        return;
-                }
-            }
-            ostr << line << "\n";
-        }
-        processedFile = ostr.str();
-    }
-
-    std::map<std::string, std::string> defs(getcfgmap(_settings.userDefines, &_settings, filename));
-
-    if (_settings.maxConfigs == 1U) {
-        std::set<std::string> pragmaOnce;
-        std::list<std::string> includes;
-        processedFile = handleIncludes(processedFile, filename, includePaths, defs, pragmaOnce, includes);
-        resultConfigurations = getcfgs(processedFile, filename, defs);
-    } else {
-        handleIncludes(processedFile, filename, includePaths);
-
-        replaceIfDefined(processedFile);
-
-        // Get all possible configurations..
-        resultConfigurations = getcfgs(processedFile, filename, defs);
-
-        // Remove configurations that are disabled by -U
-        handleUndef(resultConfigurations);
-    }
+    processedFile = tokens1.stringify();
 }
 
 void Preprocessor::handleUndef(std::list<std::string> &configurations) const

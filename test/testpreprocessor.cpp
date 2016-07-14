@@ -58,15 +58,15 @@ public:
 
             if (errorLogger) {
                 for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {
-                    const simplecpp::Output &output = *it;
-                    if (output.type == simplecpp::Output::ERROR) {
+                    const simplecpp::Output &msg = *it;
+                    if (msg.type == simplecpp::Output::ERROR) {
 
                         std::list<ErrorLogger::ErrorMessage::FileLocation> locationList;
-                        ErrorLogger::ErrorMessage::FileLocation loc(output.location.file(), output.location.line);
+                        ErrorLogger::ErrorMessage::FileLocation loc(msg.location.file(), msg.location.line);
                         locationList.push_back(loc);
                         errorLogger->reportErr(ErrorLogger::ErrorMessage(locationList,
                                                Severity::error,
-                                               output.msg,
+                                               msg.msg,
                                                "preprocessorError",
                                                false));
                     }
@@ -86,18 +86,6 @@ private:
     Preprocessor preprocessor0;
 
     void run() {
-        // Just read the code into a string. Perform simple cleanup of the code
-        TEST_CASE(readCode1);
-        TEST_CASE(readCode2); // #4308 - convert C++11 raw string to plain old C string
-        TEST_CASE(readCode3);
-        TEST_CASE(readCode4); // #4351 - escaped whitespace in gcc
-        TEST_CASE(readCode5); // #7042 - C++14 digit separators
-
-        // reading utf-16 file
-        TEST_CASE(utf16);
-
-        // remove comments
-        TEST_CASE(removeComments);
 
         // The bug that started the whole work with the new preprocessor
         TEST_CASE(Bug2190219);
@@ -107,7 +95,6 @@ private:
         TEST_CASE(test3);
         TEST_CASE(test4);
         TEST_CASE(test5);
-        TEST_CASE(test6);
         TEST_CASE(test7);
         TEST_CASE(test7a);
         TEST_CASE(test7b);
@@ -120,27 +107,13 @@ private:
 
 
         TEST_CASE(error1); // #error => don't extract any code
-        TEST_CASE(error2); // #error with extended chars
         TEST_CASE(error3);
         TEST_CASE(error4);  // #2919 - wrong filename is reported
         TEST_CASE(error5);
 
-        TEST_CASE(if0_exclude);
-        TEST_CASE(if0_whitespace);
-        TEST_CASE(if0_else);
-        TEST_CASE(if0_elif);
-
-        // Don't handle include in a #if 0 block
-        TEST_CASE(if0_include_1);
-        TEST_CASE(if0_include_2);
-
         // Handling include guards (don't create extra configuration for it)
         TEST_CASE(includeguard1);
         TEST_CASE(includeguard2);
-
-        TEST_CASE(newlines);
-
-        TEST_CASE(comments1);
 
         TEST_CASE(if0);
         TEST_CASE(if1);
@@ -172,12 +145,6 @@ private:
         TEST_CASE(ticket_3675);
         TEST_CASE(ticket_3699);
         TEST_CASE(ticket_4922); // #4922
-
-        TEST_CASE(multiline1);
-        TEST_CASE(multiline2);
-        TEST_CASE(multiline3);
-        TEST_CASE(multiline4);
-        TEST_CASE(multiline5);
 
         TEST_CASE(remove_asm);
 
@@ -239,12 +206,8 @@ private:
         TEST_CASE(handle_error);
         TEST_CASE(dup_defines);
 
-        TEST_CASE(unicodeInCode);
-        TEST_CASE(unicodeInComment);
-        TEST_CASE(unicodeInString);
         TEST_CASE(define_part_of_func);
         TEST_CASE(conditionalDefine);
-        TEST_CASE(multiline_comment);
         TEST_CASE(macro_parameters);
         TEST_CASE(newline_in_macro);
         TEST_CASE(includes);
@@ -266,16 +229,8 @@ private:
 
         TEST_CASE(redundant_config);
 
-        TEST_CASE(testPreprocessorRead1);
-        TEST_CASE(testPreprocessorRead2);
-        TEST_CASE(testPreprocessorRead3);
-        TEST_CASE(testPreprocessorRead4);
-
         TEST_CASE(invalid_define_1); // #2605 - hang for: '#define ='
         TEST_CASE(invalid_define_2); // #4036 - hang for: '#define () {(int f(x) }'
-
-        // Show 'missing include' warnings
-        TEST_CASE(missingInclude);
 
         // inline suppression, missingInclude
         TEST_CASE(inline_suppression_for_missing_include);
@@ -299,8 +254,6 @@ private:
         TEST_CASE(def_handleIncludes_ifelse2);
         TEST_CASE(def_handleIncludes_ifelse3);   // #4868 - crash
 
-        TEST_CASE(def_valueWithParentheses); // #3531
-
         // Using -U to undefine symbols
         TEST_CASE(undef1);
         TEST_CASE(undef2);
@@ -310,7 +263,6 @@ private:
         TEST_CASE(undef6);
         TEST_CASE(undef7);
         TEST_CASE(undef9);
-        TEST_CASE(undef10);
 
         TEST_CASE(handleUndef);
 
@@ -323,18 +275,11 @@ private:
 
         TEST_CASE(garbage);
 
-        TEST_CASE(wrongPathOnUnicodeError); // see #6773
         TEST_CASE(wrongPathOnErrorDirective);
 
         TEST_CASE(testDirectiveIncludeTypes);
         TEST_CASE(testDirectiveIncludeLocations);
         TEST_CASE(testDirectiveIncludeComments);
-    }
-
-    std::string preprocessorRead(const char* code) {
-        errout.str("");
-        std::istringstream istr(code);
-        return preprocessor0.read(istr, "test.c");
     }
 
     void preprocess(const char* code, std::map<std::string, std::string>& actual, const char filename[] = "file.c") {
@@ -352,117 +297,6 @@ private:
             }
         }
     }
-
-
-    void readCode1() {
-        const char code[] = " \t a //\n"
-                            "  #aa\t /* remove this */\tb  \r\n";
-        ASSERT_EQUALS("a\n#aa b\n", preprocessorRead(code));
-    }
-
-    void readCode2() {
-        const char code[] = "R\"( \" \\ ' /* abc */ \n)\";";
-        ASSERT_EQUALS("\" \\\" \\\\ ' /* abc */ \\n\"\n;", preprocessorRead(code));
-    }
-
-    void readCode3() {
-        const char code[] = "func(#errorname)";
-        ASSERT_EQUALS("func(#errorname)", preprocessorRead(code));
-    }
-
-    void readCode4() {
-        const char code[] = "char c = '\\ ';";
-        ASSERT_EQUALS("char c = '\\ ';", preprocessorRead(code));
-        ASSERT_EQUALS("", errout.str());
-    }
-
-    void readCode5() {
-        ASSERT_EQUALS("int i = 0x100000;", preprocessorRead("int i = 0x1000'00;"));
-        ASSERT_EQUALS("", errout.str());
-
-        ASSERT_EQUALS("int i = 0x0F0FFFFF;", preprocessorRead("int i = 0x0F0F'FFFF;"));
-        ASSERT_EQUALS("", errout.str());
-
-        // Ticket #7137
-        const char code[] = "void t(char c) { switch (c) { case'M': break; } }";
-        ASSERT_EQUALS(code, preprocessorRead(code));
-        ASSERT_EQUALS("", errout.str());
-    }
-
-
-    void utf16() {
-
-        // a => a
-        {
-            const char code[] = { '\xff', '\xfe', 'a', '\0' };
-            std::string s(code, sizeof(code));
-            std::istringstream istr(s);
-            ASSERT_EQUALS("a", preprocessor0.read(istr, "test.c"));
-        }
-
-        {
-            const char code[] = { '\xfe', '\xff', '\0', 'a' };
-            std::string s(code, sizeof(code));
-            std::istringstream istr(s);
-            ASSERT_EQUALS("a", preprocessor0.read(istr, "test.c"));
-        }
-
-        // extended char => 0xff
-        {
-            const char code[] = { '\xff', '\xfe', 'a', 'a' };
-            std::string s(code, sizeof(code));
-            std::istringstream istr(s);
-            const char expected[] = { '\xff', 0 };
-            ASSERT_EQUALS(expected, preprocessor0.read(istr, "test.c"));
-        }
-
-        {
-            const char code[] = { '\xfe', '\xff', 'a', 'a' };
-            std::string s(code, sizeof(code));
-            std::istringstream istr(s);
-            const char expected[] = { '\xff', 0 };
-            ASSERT_EQUALS(expected, preprocessor0.read(istr, "test.c"));
-        }
-
-        // \r\n => \n
-        {
-            const char code[] = { '\xff', '\xfe', '\r', '\0', '\n', '\0' };
-            std::string s(code, sizeof(code));
-            std::istringstream istr(s);
-            ASSERT_EQUALS("\n", preprocessor0.read(istr, "test.c"));
-        }
-
-        {
-            const char code[] = { '\xfe', '\xff', '\0', '\r', '\0', '\n' };
-            std::string s(code, sizeof(code));
-            std::istringstream istr(s);
-            ASSERT_EQUALS("\n", preprocessor0.read(istr, "test.c"));
-        }
-    }
-
-
-    void removeComments() {
-        // #3837 - asm comments
-        const char code[] = "void test(void) {\n"
-                            "   __asm\n"
-                            "   {\n"
-                            "      ;---- тест\n"
-                            "   }\n"
-                            "}\n";
-        ASSERT_EQUALS(true, std::string::npos == preprocessor0.removeComments(code, "3837.c").find("----"));
-
-        ASSERT_EQUALS(" __asm123", preprocessor0.removeComments(" __asm123", "3837.cpp"));
-        ASSERT_EQUALS("\" __asm { ; } \"", preprocessor0.removeComments("\" __asm { ; } \"", "3837.cpp"));
-        ASSERT_EQUALS("__asm__ volatile { \"\" }", preprocessor0.removeComments("__asm__ volatile { \"\" }", "3837.cpp"));
-
-        // #4873
-        ASSERT_EQUALS("__asm { }", preprocessor0.removeComments("__asm { /* This is a comment */ }", "4873.cpp"));
-
-        // #5169
-        ASSERT_EQUALS("#define A(B) __asm__(\"int $3\"); int wait=1;\n",
-                      preprocessor0.removeComments("#define A(B) __asm__(\"int $3\"); /**/ int wait=1;\n", "5169.c"));
-    }
-
 
     void Bug2190219() {
         const char filedata[] = "#ifdef __cplusplus\n"
@@ -585,17 +419,6 @@ private:
         ASSERT_EQUALS("\n\n\nB", actual[""]);
         ASSERT_EQUALS("\nA", actual["ABC"]);
         ASSERT_EQUALS("\n\n\nB\n\nC", actual["DEF"]);
-    }
-
-    void test6() {
-        const char filedata[] = "#if(A)\n"
-                                "#if ( A ) \n"
-                                "#if A\n"
-                                "#if defined((A))\n"
-                                "#elif defined (A)\n";
-
-        // Compare results..
-        ASSERT_EQUALS("#if A\n#if A\n#if A\n#if defined(A)\n#elif defined(A)\n", preprocessorRead(filedata));
     }
 
     void test7() {
@@ -793,16 +616,6 @@ private:
 
     }
 
-
-    void error2() {
-        const char filedata[] = "#error \xAB\n"
-                                "#warning \xAB\n"
-                                "123";
-
-        ASSERT_EQUALS("#error\n\n123", preprocessorRead(filedata));
-    }
-
-
     void error3() {
         errout.str("");
         Settings settings;
@@ -847,76 +660,6 @@ private:
         const std::string code("#error hello world!\n");
         preprocessor.getcode(code, "X", "test.c");
         ASSERT_EQUALS("", errout.str());
-    }
-
-    void if0_exclude() {
-        const char* code = "#if 0\n"
-                           "A\n"
-                           "#endif\n"
-                           "B\n";
-        ASSERT_EQUALS("#if 0\n\n#endif\nB\n", preprocessorRead(code));
-
-        const char* code2 = "#if (0)\n"
-                            "A\n"
-                            "#endif\n"
-                            "B\n";
-        ASSERT_EQUALS("#if 0\n\n#endif\nB\n", preprocessorRead(code2));
-    }
-
-    void if0_whitespace() {
-        const char* code = " # if  0 \n"
-                           "A\n"
-                           " # endif \n"
-                           "B\n";
-        ASSERT_EQUALS("#if 0\n\n#endif\nB\n", preprocessorRead(code));
-    }
-
-    void if0_else() {
-        const char* code = "#if 0\n"
-                           "A\n"
-                           "#else\n"
-                           "B\n"
-                           "#endif\n"
-                           "C\n";
-        ASSERT_EQUALS("#if 0\n\n#else\nB\n#endif\nC\n", preprocessorRead(code));
-
-        const char* code2 = "#if 1\n"
-                            "A\n"
-                            "#else\n"
-                            "B\n"
-                            "#endif\n"
-                            "C\n";
-        TODO_ASSERT_EQUALS("#if 1\nA\n#else\n\n#endif\nC\n",
-                           "#if 1\nA\n#else\nB\n#endif\nC\n", preprocessorRead(code2));
-    }
-
-    void if0_elif() {
-        const char* code = "#if 0\n"
-                           "A\n"
-                           "#elif 1\n"
-                           "B\n"
-                           "#endif\n"
-                           "C\n";
-        ASSERT_EQUALS("#if 0\n\n#elif 1\nB\n#endif\nC\n", preprocessorRead(code));
-    }
-
-    void if0_include_1() {
-        const char* code = "#if 0\n"
-                           "#include \"a.h\"\n"
-                           "#endif\n"
-                           "AB\n";
-        ASSERT_EQUALS("#if 0\n\n#endif\nAB\n", preprocessorRead(code));
-    }
-
-    void if0_include_2() {
-        const char* code = "#if 0\n"
-                           "#include \"a.h\"\n"
-                           "#ifdef WIN32\n"
-                           "#else\n"
-                           "#endif\n"
-                           "#endif\n"
-                           "AB\n";
-        ASSERT_EQUALS("#if 0\n\n#ifdef WIN32\n#else\n#endif\n#endif\nAB\n", preprocessorRead(code));
     }
 
     void includeguard1() {
@@ -975,62 +718,6 @@ private:
         ASSERT_EQUALS("\n\n\nint main ( ) { }", actual[""]);
         ASSERT_EQUALS("\n#line 1 \"abc.h\"\nclass A { } ;\n#line 4 \"file.c\"\n int main ( ) { }", actual["ABC"]);
     }
-
-    void newlines() {
-        const char filedata[] = "\r\r\n\n";
-        ASSERT_EQUALS("\n\n\n", preprocessorRead(filedata));
-    }
-
-
-
-    void comments1() {
-        {
-            const char filedata[] = "/*\n"
-                                    "#ifdef WIN32\n"
-                                    "#endif\n"
-                                    "*/\n";
-
-            // Preprocess => actual result..
-            std::map<std::string, std::string> actual;
-            preprocess(filedata, actual);
-
-            // Compare results..
-            ASSERT_EQUALS(1, static_cast<unsigned int>(actual.size()));
-            ASSERT_EQUALS("", actual[""]);
-        }
-
-        {
-            const char filedata[] = "/*\n"
-                                    "\x080 #ifdef WIN32\n"
-                                    "#endif\n"
-                                    "*/\n";
-
-            // Preprocess => actual result..
-            std::map<std::string, std::string> actual;
-            preprocess(filedata, actual);
-
-            // Compare results..
-            ASSERT_EQUALS(1, static_cast<unsigned int>(actual.size()));
-            ASSERT_EQUALS("", actual[""]);
-        }
-
-        {
-            const char filedata[] = "void f()\n"
-                                    "{\n"
-                                    "  *p = a / *b / *c;\n"
-                                    "}\n";
-
-            // Preprocess => actual result..
-            std::map<std::string, std::string> actual;
-            preprocess(filedata, actual);
-
-            // Compare results..
-            ASSERT_EQUALS(1, static_cast<unsigned int>(actual.size()));
-            ASSERT_EQUALS("void f ( )\n{\n* p = a / * b / * c ;\n}", actual[""]);
-        }
-    }
-
-
 
     void if0() {
         const char filedata[] = " # if /* comment */  0 // comment\n"
@@ -1586,63 +1273,6 @@ private:
                            "__typeof __finite (__finite) __finite __inline \"__GI___finite\");";
         std::map<std::string, std::string> actual;
         preprocess(code, actual);
-    }
-
-    void multiline1() {
-        const char filedata[] = "#define str \"abc\"     \\\n"
-                                "            \"def\"       \n"
-                                "abcdef = str;\n";
-        ASSERT_EQUALS("#define str \"abc\" \"def\"\n\nabcdef = str;\n", preprocessorRead(filedata));
-    }
-
-    void multiline2() {
-        const char filedata[] = "#define sqr(aa) aa * \\\n"
-                                "                aa\n"
-                                "sqr(5);\n";
-        ASSERT_EQUALS("#define sqr(aa) aa * aa\n\nsqr(5);\n", preprocessorRead(filedata));
-    }
-
-    void multiline3() {
-        const char filedata[] = "const char *str = \"abc\\\n"
-                                "def\\\n"
-                                "ghi\"\n";
-        ASSERT_EQUALS("const char *str = \"abcdefghi\"\n\n\n", preprocessorRead(filedata));
-    }
-
-    void multiline4() {
-        errout.str("");
-        const char filedata[] = "#define A 1 \\ \n"
-                                "2\n"
-                                "A\n";
-
-        // Preprocess => actual result..
-        std::map<std::string, std::string> actual;
-        preprocess(filedata, actual);
-
-        // Compare results..
-        ASSERT_EQUALS(1, static_cast<unsigned int>(actual.size()));
-#ifdef __GNUC__
-        ASSERT_EQUALS("\n\n$1 $2", actual[""]);
-#else
-        ASSERT_EQUALS("\n2\n$1 \\", actual[""]);
-#endif
-        ASSERT_EQUALS("", errout.str());
-    }
-
-    void multiline5() {
-        errout.str("");
-        const char filedata[] = "#define ABC int a /*\n"
-                                "*/= 4;\n"
-                                "int main(){\n"
-                                "ABC\n"
-                                "}\n";
-
-        // Preprocess => actual result..
-        std::map<std::string, std::string> actual;
-        preprocess(filedata, actual);
-
-        // TODO: Code is not correct.
-        ASSERT_EQUALS("", errout.str());
     }
 
     void remove_asm() const {
@@ -2403,22 +2033,6 @@ private:
         }
     }
 
-    void unicodeInCode() {
-        const char* filedata = "a\xC8";
-        preprocessorRead(filedata);
-        ASSERT_EQUALS("[test.c:1]: (error) The code contains unhandled characters (character code = 0xc8). Checking continues, but do not expect valid results.\n", errout.str());
-    }
-
-    void unicodeInComment() {
-        const char* filedata = "//\xC8";
-        ASSERT_EQUALS("", preprocessorRead(filedata));
-    }
-
-    void unicodeInString() {
-        const char* filedata = "\"\xC8\"";
-        ASSERT_EQUALS(filedata, preprocessorRead(filedata));
-    }
-
 
     void define_part_of_func() {
         const char filedata[] = "#define A g(\n"
@@ -2452,22 +2066,6 @@ private:
         ASSERT_EQUALS(2, static_cast<unsigned int>(actual.size()));
         ASSERT_EQUALS("\n\n\n\n\n$20", actual[""]);
         ASSERT_EQUALS("\n\n\n\n\n$10", actual["A"]);
-        ASSERT_EQUALS("", errout.str());
-    }
-
-
-    void multiline_comment() {
-        const char filedata[] = "#define ABC {// \\\n"
-                                "}\n"
-                                "void f() ABC\n";
-
-        // Preprocess => actual result..
-        std::map<std::string, std::string> actual;
-        preprocess(filedata, actual);
-
-        // Compare results..
-        ASSERT_EQUALS(1, static_cast<unsigned int>(actual.size()));
-        ASSERT_EQUALS("\n\nvoid f ( ) ${ $}", actual[""]);
         ASSERT_EQUALS("", errout.str());
     }
 
@@ -2855,41 +2453,6 @@ private:
         }
     }
 
-    void testPreprocessorRead1() {
-        const char* filedata = "/*\n*/ # /*\n*/ defi\\\nne FO\\\nO 10\\\n20";
-        ASSERT_EQUALS("#define FOO 1020", preprocessorRead(filedata));
-    }
-
-    void testPreprocessorRead2() {
-        const char* filedata = "\"foo\\\\\nbar\"";
-        ASSERT_EQUALS("\"foo\\bar\"", preprocessorRead(filedata));
-    }
-
-    void testPreprocessorRead3() {
-        const char* filedata = "#define A \" a  \"\n\" b\"";
-        ASSERT_EQUALS(filedata, preprocessorRead(filedata));
-    }
-
-    void testPreprocessorRead4() {
-        {
-            // test < \\> < > (unescaped)
-            const char* filedata = "#define A \" \\\\\"/*space*/  \" \"";
-            ASSERT_EQUALS("#define A \" \\\\\" \" \"", preprocessorRead(filedata));
-        }
-
-        {
-            // test <" \\\"  "> (unescaped)
-            const char* filedata = "#define A \" \\\\\\\"  \"";
-            ASSERT_EQUALS("#define A \" \\\\\\\"  \"", preprocessorRead(filedata));
-        }
-
-        {
-            // test <" \\\\">  <" "> (unescaped)
-            const char* filedata = "#define A \" \\\\\\\\\"/*space*/  \" \"";
-            ASSERT_EQUALS("#define A \" \\\\\\\\\" \" \"", preprocessorRead(filedata));
-        }
-    }
-
     void invalid_define_1() {
         std::map<std::string, std::string> actual;
         preprocess("#define =\n", actual); // don't hang
@@ -2898,18 +2461,6 @@ private:
     void invalid_define_2() {  // #4036
         std::map<std::string, std::string> actual;
         preprocess("#define () {(int f(x) }\n", actual); // don't hang
-    }
-
-    void missingInclude() {
-        Preprocessor::missingIncludeFlag = false;
-
-        std::istringstream src("#include \"missing.h\"\n");
-        std::string processedFile;
-        std::list<std::string> cfg;
-        std::list<std::string> paths;
-        ASSERT_EQUALS(false, Preprocessor::missingIncludeFlag);
-        preprocessor0.preprocess(src, processedFile, cfg, "test.c", paths);
-        ASSERT_EQUALS(true, Preprocessor::missingIncludeFlag);
     }
 
     void inline_suppression_for_missing_include() {
@@ -3347,35 +2898,6 @@ private:
         preprocessor.handleIncludes(code, "test.c", includePaths, defs, pragmaOnce, std::list<std::string>()); // don't crash
     }
 
-    void def_valueWithParentheses() {
-        // #define should introduce a new symbol regardless of parentheses in the value
-        // and regardless of white space in weird places (people do this for some reason).
-        const char code[] = "#define A (Fred)\n"
-                            "      #       define B (Flintstone)\n"
-                            "     #define C (Barney)\n"
-                            "\t#\tdefine\tD\t(Rubble)\t\t\t\n";
-
-        const std::string filePath("test.c");
-        const std::list<std::string> includePaths;
-        std::map<std::string,std::string> defs;
-        std::set<std::string> pragmaOnce;
-
-        std::istringstream istr(code);
-        const std::string s(preprocessor0.read(istr, ""));
-        preprocessor0.handleIncludes(s, filePath, includePaths, defs, pragmaOnce, std::list<std::string>());
-
-        ASSERT(defs.find("A") != defs.end());
-        ASSERT_EQUALS("(Fred)", defs["A"]);
-
-        ASSERT(defs.find("B") != defs.end());
-        ASSERT_EQUALS("(Flintstone)", defs["B"]);
-
-        ASSERT(defs.find("C") != defs.end());
-        ASSERT_EQUALS("(Barney)", defs["C"]);
-
-        ASSERT(defs.find("D") != defs.end());
-        ASSERT_EQUALS("(Rubble)", defs["D"]);
-    }
 
     void undef1() {
         Settings settings;
@@ -3545,32 +3067,6 @@ private:
         ASSERT_EQUALS("\n\nFred & Wilma", actual[""]);
     }
 
-    void undef10() {
-        Settings settings;
-
-        const char filedata[] = "#ifndef X\n"
-                                "#endif\n"
-                                "#ifndef Y\n"
-                                "#endif\n";
-
-        // Preprocess => actual result..
-        std::istringstream istr(filedata);
-        settings.userUndefs.insert("X"); // User undefs should override internal defines
-
-        Preprocessor preprocessor(settings, this);
-
-        std::string processedFile;
-        std::list<std::string> resultConfigurations;
-        const std::list<std::string> includePaths;
-        preprocessor.preprocess(istr, processedFile, resultConfigurations, "file.c", includePaths);
-
-
-        // Compare results. Two configurations "" and "Y". No "X".
-        ASSERT_EQUALS(2U, resultConfigurations.size());
-        ASSERT_EQUALS("", resultConfigurations.front());
-        ASSERT_EQUALS("Y", resultConfigurations.back());
-    }
-
     void handleUndef() {
         Settings settings;
         settings.userUndefs.insert("X");
@@ -3682,16 +3178,6 @@ private:
         // Preprocess => don't crash..
         std::map<std::string, std::string> actual;
         preprocess(filedata, actual);
-    }
-
-    void wrongPathOnUnicodeError() {
-        const char filedata[] = "#file ././test.c\n"
-                                "extern int 🌷;\n";
-        preprocessorRead(filedata);
-        ASSERT_EQUALS("[test.c:2]: (error) The code contains unhandled characters (character code = 0xf0). Checking continues, but do not expect valid results.\n"
-                      "[test.c:2]: (error) The code contains unhandled characters (character code = 0x9f). Checking continues, but do not expect valid results.\n"
-                      "[test.c:2]: (error) The code contains unhandled characters (character code = 0x8c). Checking continues, but do not expect valid results.\n"
-                      "[test.c:2]: (error) The code contains unhandled characters (character code = 0xb7). Checking continues, but do not expect valid results.\n", errout.str());
     }
 
     void wrongPathOnErrorDirective() {
