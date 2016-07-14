@@ -86,7 +86,7 @@ private:
         TEST_CASE(switchRedundantAssignmentTest);
         TEST_CASE(switchRedundantOperationTest);
         TEST_CASE(switchRedundantBitwiseOperationTest);
-        TEST_CASE(switchFallThroughCase);
+        // TODO? TEST_CASE(switchFallThroughCase);
         TEST_CASE(unreachableCode);
 
         TEST_CASE(suspiciousCase);
@@ -254,7 +254,6 @@ private:
 
         logger.reportUnmatchedSuppressions(settings.nomsg.getUnmatchedLocalSuppressions(filename, false));
     }
-
 
     void emptyBrackets() {
         check("{\n"
@@ -2164,10 +2163,6 @@ private:
     }
 
     void switchFallThroughCase() {
-        // TODO
-
-        return;
-
         check_preprocess_suppress(
             "void foo() {\n"
             "    switch (a) {\n"
