@@ -238,7 +238,6 @@ std::string Preprocessor::readpreprocessor(std::istream &istr, const unsigned in
     }
 
     std::string result = preprocessCleanupDirectives(code.str());
-    result = removeParentheses(result);
     return result;
 }
 
@@ -486,81 +485,6 @@ std::string Preprocessor::preprocessCleanupDirectives(const std::string &process
 
     return code.str();
 }
-
-static bool hasbom(const std::string &str)
-{
-    return bool(str.size() >= 3 &&
-                static_cast<unsigned char>(str[0]) == 0xef &&
-                static_cast<unsigned char>(str[1]) == 0xbb &&
-                static_cast<unsigned char>(str[2]) == 0xbf);
-}
-
-std::string Preprocessor::removeParentheses(const std::string &str)
-{
-    if (str.find("\n#if") == std::string::npos && str.compare(0, 3, "#if") != 0)
-        return str;
-
-    std::istringstream istr(str);
-    std::ostringstream ret;
-    std::string line;
-    while (std::getline(istr, line)) {
-        if (line.compare(0, 3, "#if") == 0 || line.compare(0, 5, "#elif") == 0) {
-            std::string::size_type pos;
-            pos = 0;
-            while ((pos = line.find(" (", pos)) != std::string::npos)
-                line.erase(pos, 1);
-            pos = 0;
-            while ((pos = line.find("( ", pos)) != std::string::npos)
-                line.erase(pos + 1, 1);
-            pos = 0;
-            while ((pos = line.find(" )", pos)) != std::string::npos)
-                line.erase(pos, 1);
-            pos = 0;
-            while ((pos = line.find(") ", pos)) != std::string::npos)
-                line.erase(pos + 1, 1);
-
-            // Remove inner parentheses "((..))"..
-            pos = 0;
-            while ((pos = line.find("((", pos)) != std::string::npos) {
-                ++pos;
-                std::string::size_type pos2 = line.find_first_of("()", pos + 1);
-                if (pos2 != std::string::npos && line[pos2] == ')') {
-                    line.erase(pos2, 1);
-                    line.erase(pos, 1);
-                }
-            }
-
-            // "#if(A) => #if A", but avoid "#if (defined A) || defined (B)"
-            if ((line.compare(0, 4, "#if(") == 0 || line.compare(0, 6, "#elif(") == 0) &&
-                line[line.length() - 1] == ')') {
-                int ind = 0;
-                for (std::string::size_type i = 0; i < line.length(); ++i) {
-                    if (line[i] == '(')
-                        ++ind;
-                    else if (line[i] == ')') {
-                        --ind;
-                        if (ind == 0) {
-                            if (i == line.length() - 1) {
-                                line[line.find('(')] = ' ';
-                                line.erase(line.length() - 1);
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (line.compare(0, 4, "#if(") == 0)
-                line.insert(3, " ");
-            else if (line.compare(0, 6, "#elif(") == 0)
-                line.insert(5, " ");
-        }
-        ret << line << "\n";
-    }
-
-    return ret.str();
-}
-
 
 void Preprocessor::removeAsm(std::string &str)
 {
