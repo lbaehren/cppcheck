@@ -188,6 +188,34 @@ static std::string cfg(const std::vector<std::string> &configs)
     return ret;
 }
 
+// TODO: this is copy pasted from simplecpp
+static std::string openHeader(std::ifstream &f, const simplecpp::DUI &dui, const std::string &sourcefile, const std::string &header) {
+  if (sourcefile.find_first_of("\\/") != std::string::npos) {
+    const std::string s = sourcefile.substr(0, sourcefile.find_last_of("\\/") + 1U) + header;
+    f.open(s);
+    if (f.is_open())
+      return s;
+  }
+  else {
+    f.open(header);
+    if (f.is_open())
+      return header;
+  }
+
+  for (std::list<std::string>::const_iterator it = dui.includePaths.begin(); it != dui.includePaths.end(); ++it) {
+    std::string s = *it;
+    if (!s.empty() && s[s.size() - 1U] != '/' && s[s.size() - 1U] != '\\')
+      s += '/';
+    s += header;
+    f.open(s);
+    if (f.is_open())
+      return s;
+  }
+
+  return "";
+}
+
+
 std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &tokens) const
 {
     std::set<std::string> ret;
@@ -239,29 +267,25 @@ std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &token
         } else if (tok->next->str == "define" && tok->next->next && tok->next->next->name && tok->location.sameline(tok->next->next->location)) {
             defined.insert(tok->next->next->str);
         } else if (tok->next->str == "include") {
-            if (tok->next->next && tok->location.sameline(tok->next->next->location)) {
-                if (tok->next->next->name || tok->next->next->str[0] == '<') {
-                    std::string filename = tok->next->next->str;
-                    filename = filename.substr(1, filename.size() - 2U);
-                    std::ifstream f(filename);
-                    if (f.is_open()) {
-                        std::vector<std::string> files;
-                        const simplecpp::TokenList htokens(f, files);
-                        std::set<std::string> hconfigs(getConfigs(htokens));
-                        for (unsigned int i = 0; i < configs_if.size(); ++i)
-                            hconfigs.insert(configs_if[i]);
-                        std::string s;
-                        for (std::set<std::string>::const_iterator it = hconfigs.begin(); it != hconfigs.end(); ++it) {
-                            if (it->empty())
-                                continue;
-                            if (!s.empty())
-                                s += ';';
-                            s += *it;
-
-                        }
-                        ret.insert(s);
-                    }
-                }
+            const simplecpp::Token * const htok = tok->next->next;
+            if (!htok || !tok->location.sameline(htok->location))
+                continue;
+            std::string filename = htok->str;
+            if (filename.size() <= 2U || (filename[0] != '\"' && filename[0] != '<'))
+                continue;
+            filename = filename.substr(1, filename.size() - 2U);
+            std::ifstream f;
+            simplecpp::DUI dui;
+            dui.includePaths = _settings.includePaths;
+            std::string hfile = openHeader(f, dui, htok->location.file(), filename);
+            if (!f.is_open())
+                continue;
+            std::vector<std::string> files;
+            const simplecpp::TokenList htokens(f, files, hfile);
+            std::set<std::string> hconfigs(getConfigs(htokens));
+            for (std::set<std::string>::const_iterator it = hconfigs.begin(); it != hconfigs.end(); ++it) {
+                if (!it->empty())
+                    ret.insert(*it);
             }
         }
     }
