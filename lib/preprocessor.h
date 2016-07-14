@@ -218,11 +218,6 @@ private:
 
 public:
 
-    /**
-     * Get all possible configurations sorted in alphabetical order.
-     * By looking at the ifdefs and ifndefs in filedata
-     */
-    std::list<std::string> getcfgs(const std::string &filedata, const std::string &filename, const std::map<std::string, std::string> &defs);
 
     /**
      * Evaluate condition 'numerically'
