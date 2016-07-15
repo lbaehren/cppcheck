@@ -267,6 +267,7 @@ std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &token
         } else if (tok->next->str == "define" && tok->next->next && tok->next->next->name && tok->location.sameline(tok->next->next->location)) {
             defined.insert(tok->next->next->str);
         } else if (tok->next->str == "include") {
+            /* TODO need to speedup
             const simplecpp::Token * const htok = tok->next->next;
             if (!htok || !tok->location.sameline(htok->location))
                 continue;
@@ -287,6 +288,7 @@ std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &token
                 if (!it->empty())
                     ret.insert(*it);
             }
+            */
         }
     }
 
