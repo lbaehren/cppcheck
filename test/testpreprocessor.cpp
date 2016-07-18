@@ -48,7 +48,8 @@ public:
             simplecpp::OutputList outputList;
             std::vector<std::string> files;
             const simplecpp::TokenList tokens1 = simplecpp::TokenList(istr, files, "file.cpp", &outputList);
-            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, simplecpp::DUI(), &outputList);
+            const std::map<std::string, simplecpp::TokenList*> filedata;
+            const simplecpp::TokenList tokens2 = simplecpp::preprocess(tokens1, files, filedata, simplecpp::DUI(), &outputList);
 
             if (errorLogger) {
                 for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {

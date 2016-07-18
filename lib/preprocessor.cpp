@@ -61,7 +61,12 @@ char Preprocessor::macroChar = char(1);
 
 Preprocessor::Preprocessor(Settings& settings, ErrorLogger *errorLogger) : _settings(settings), _errorLogger(errorLogger)
 {
+}
 
+Preprocessor::~Preprocessor()
+{
+    for (std::map<std::string, simplecpp::TokenList *>::iterator it = tokenlists.begin(); it != tokenlists.end(); ++it)
+        delete it->second;
 }
 
 void Preprocessor::writeError(const std::string &fileName, const unsigned int linenr, ErrorLogger *errorLogger, const std::string &errorType, const std::string &errorText)
@@ -188,50 +193,12 @@ static std::string cfg(const std::vector<std::string> &configs)
     return ret;
 }
 
-// TODO: this is copy pasted from simplecpp
-static std::string openHeader(std::ifstream &f, const simplecpp::DUI &dui, const std::string &sourcefile, const std::string &header) {
-  if (sourcefile.find_first_of("\\/") != std::string::npos) {
-    const std::string s = sourcefile.substr(0, sourcefile.find_last_of("\\/") + 1U) + header;
-    f.open(s);
-    if (f.is_open())
-      return s;
-  }
-  else {
-    f.open(header);
-    if (f.is_open())
-      return header;
-  }
-
-  for (std::list<std::string>::const_iterator it = dui.includePaths.begin(); it != dui.includePaths.end(); ++it) {
-    std::string s = *it;
-    if (!s.empty() && s[s.size() - 1U] != '/' && s[s.size() - 1U] != '\\')
-      s += '/';
-    s += header;
-    f.open(s);
-    if (f.is_open())
-      return s;
-  }
-
-  return "";
-}
-
-
-std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &tokens) const
+static void getConfigs(const simplecpp::TokenList &tokens, std::set<std::string> &defined, std::set<std::string> &ret)
 {
-    std::set<std::string> ret;
-    ret.insert("");
-    simplecpp::TokenList tokens2(tokens);
-    tokens2.removeComments();
-    if (!tokens2.cbegin())
-        return ret;
-
-    std::set<std::string> defined;
-    defined.insert("__cplusplus");
-
     std::vector<std::string> configs_if;
     std::vector<std::string> configs_ifndef;
 
-    for (const simplecpp::Token *tok = tokens2.cbegin(); tok; tok = tok->next) {
+    for (const simplecpp::Token *tok = tokens.cbegin(); tok; tok = tok->next) {
         if (tok->op != '#')
             continue;
         if (tok->previous && tok->location.sameline(tok->previous->location))
@@ -266,31 +233,27 @@ std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &token
                 configs_ifndef.pop_back();
         } else if (tok->next->str == "define" && tok->next->next && tok->next->next->name && tok->location.sameline(tok->next->next->location)) {
             defined.insert(tok->next->next->str);
-        } else if (tok->next->str == "include") {
-            /* TODO need to speedup
-            const simplecpp::Token * const htok = tok->next->next;
-            if (!htok || !tok->location.sameline(htok->location))
-                continue;
-            std::string filename = htok->str;
-            if (filename.size() <= 2U || (filename[0] != '\"' && filename[0] != '<'))
-                continue;
-            filename = filename.substr(1, filename.size() - 2U);
-            std::ifstream f;
-            simplecpp::DUI dui;
-            dui.includePaths = _settings.includePaths;
-            std::string hfile = openHeader(f, dui, htok->location.file(), filename);
-            if (!f.is_open())
-                continue;
-            std::vector<std::string> files;
-            const simplecpp::TokenList htokens(f, files, hfile);
-            std::set<std::string> hconfigs(getConfigs(htokens));
-            for (std::set<std::string>::const_iterator it = hconfigs.begin(); it != hconfigs.end(); ++it) {
-                if (!it->empty())
-                    ret.insert(*it);
-            }
-            */
         }
     }
+}
+
+
+std::set<std::string> Preprocessor::getConfigs(const simplecpp::TokenList &tokens) const
+{
+    std::set<std::string> ret;
+    ret.insert("");
+    simplecpp::TokenList tokens2(tokens);
+    tokens2.removeComments();
+    if (!tokens2.cbegin())
+        return ret;
+
+    std::set<std::string> defined;
+    defined.insert("__cplusplus");
+
+    ::getConfigs(tokens2, defined, ret);
+
+    for (std::map<std::string, simplecpp::TokenList*>::const_iterator it = tokenlists.begin(); it != tokenlists.end(); ++it)
+        ::getConfigs(*(it->second), defined, ret);
 
     return ret;
 }
@@ -454,6 +417,44 @@ static void splitcfg(const std::string &cfg, std::list<std::string> &defines, co
     }
 }
 
+void Preprocessor::loadFiles(const simplecpp::TokenList &rawtokens, std::vector<std::string> &files)
+{
+    const std::string filename(files[0]);
+
+    // Create a map for the cfg for faster access to defines
+    simplecpp::DUI dui;
+
+    splitcfg(_settings.userDefines, dui.defines, "1");
+
+    for (std::vector<std::string>::const_iterator it = _settings.library.defines.begin(); it != _settings.library.defines.end(); ++it) {
+        if (it->compare(0,8,"#define ")!=0)
+            continue;
+        std::string s = it->substr(8);
+        std::string::size_type pos = s.find_first_of(" (");
+        if (pos == std::string::npos) {
+            dui.defines.push_back(s);
+            continue;
+        }
+        if (s[pos] == ' ') {
+            s[pos] = '=';
+        } else {
+            s[s.find(")")+1] = '=';
+        }
+        dui.defines.push_back(s);
+    }
+
+    if (Path::isCPP(filename))
+        dui.defines.push_back("__cplusplus");
+
+    dui.undefined = _settings.userUndefs;
+
+    dui.includePaths = _settings.includePaths;
+
+    simplecpp::OutputList outputList;
+
+    tokenlists = simplecpp::load(rawtokens, files, dui, &outputList);
+}
+
 std::string Preprocessor::getcode(const simplecpp::TokenList &tokens1, const std::string &cfg, std::vector<std::string> &files, const bool writeLocations)
 {
     const std::string filename(files[0]);
@@ -490,7 +491,7 @@ std::string Preprocessor::getcode(const simplecpp::TokenList &tokens1, const std
 
     simplecpp::OutputList outputList;
     std::list<simplecpp::MacroUsage> macroUsage;
-    const simplecpp::TokenList &tokens2 = simplecpp::preprocess(tokens1, files, dui, &outputList, &macroUsage);
+    const simplecpp::TokenList &tokens2 = simplecpp::preprocess(tokens1, files, tokenlists, dui, &outputList, &macroUsage);
 
     bool showerror = (!_settings.userDefines.empty() && !_settings.force);
     for (simplecpp::OutputList::const_iterator it = outputList.begin(); it != outputList.end(); ++it) {
