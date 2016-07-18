@@ -81,6 +81,7 @@ public:
     static char macroChar;
 
     Preprocessor(Settings& settings, ErrorLogger *errorLogger = nullptr);
+    virtual ~Preprocessor();
 
     static bool missingIncludeFlag;
     static bool missingSystemIncludeFlag;
@@ -88,6 +89,8 @@ public:
     void inlineSuppressions(const simplecpp::TokenList &tokens);
 
     std::set<std::string> getConfigs(const simplecpp::TokenList &tokens) const;
+
+    void loadFiles(const simplecpp::TokenList &rawtokens, std::vector<std::string> &files);
 
     /**
      * Extract the code for each configuration
@@ -214,6 +217,8 @@ private:
 
     /** list of all directives met while preprocessing file */
     std::list<Directive> directives;
+
+    std::map<std::string, simplecpp::TokenList *> tokenlists;
 
     /** filename for cpp/c file - useful when reporting errors */
     std::string file0;

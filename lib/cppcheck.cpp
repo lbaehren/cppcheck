@@ -109,9 +109,11 @@ unsigned int CppCheck::processFile(const std::string& filename, std::istream& fi
         // Get configurations..
         if (_settings.userDefines.empty() || _settings.force) {
             Timer t("Preprocessor::getConfigs", _settings.showtime, &S_timerResults);
+            preprocessor.loadFiles(tokens1, files);
             configurations = preprocessor.getConfigs(tokens1);
         } else {
             configurations.insert(_settings.userDefines);
+            preprocessor.loadFiles(tokens1, files);
         }
 
         preprocessor.inlineSuppressions(tokens1);
