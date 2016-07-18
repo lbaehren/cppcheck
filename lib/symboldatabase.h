@@ -159,7 +159,8 @@ class CPPCHECKLIB Variable {
         fHasDefault  = (1 << 9), /** @brief function argument with default value */
         fIsStlType   = (1 << 10), /** @brief STL type ('std::') */
         fIsStlString = (1 << 11), /** @brief std::string|wstring|basic_string&lt;T&gt;|u16string|u32string */
-        fIsFloatType = (1 << 12)  /** @brief Floating point type */
+        fIsFloatType = (1 << 12), /** @brief Floating point type */
+        fIsVolatile  = (1 << 13)  /** @brief volatile */
     };
 
     /**
@@ -337,6 +338,14 @@ public:
      */
     bool isMutable() const {
         return getFlag(fIsMutable);
+    }
+
+    /**
+     * Is variable volatile.
+     * @return true if volatile, false if not
+     */
+    bool isVolatile() const {
+        return getFlag(fIsVolatile);
     }
 
     /**
@@ -1079,7 +1088,7 @@ private:
     Function *addGlobalFunctionDecl(Scope*& scope, const Token* tok, const Token *argStart, const Token* funcStart);
     Function *addGlobalFunction(Scope*& scope, const Token*& tok, const Token *argStart, const Token* funcStart);
     void addNewFunction(Scope **info, const Token **tok);
-    bool isFunction(const Token *tok, const Scope* outerScope, const Token **funcStart, const Token **argStart) const;
+    bool isFunction(const Token *tok, const Scope* outerScope, const Token **funcStart, const Token **argStart, const Token** declEnd) const;
     const Type *findTypeInNested(const Token *tok, const Scope *startScope) const;
     const Scope *findNamespace(const Token * tok, const Scope * scope) const;
     Function *findFunctionInScope(const Token *func, const Scope *ns);

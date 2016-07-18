@@ -79,6 +79,11 @@ const Token * Tokenizer::isFunctionHead(const Token *tok, const std::string &end
             tok = tok->linkAt(1)->next();
         if (Token::Match(tok, "%name% (") && tok->isUpperCaseName())
             tok = tok->linkAt(1)->next();
+        if (tok && tok->str() == ".") { // trailing return type
+            for (tok = tok->next(); tok && !Token::Match(tok, "[;{]"); tok = tok->next())
+                if (tok->link() && Token::Match(tok, "<|[|("))
+                    tok = tok->link();
+        }
         if (Token::Match(tok, "= 0|default|delete ;"))
             tok = tok->tokAt(2);
         return (tok && endsWith.find(tok->str()) != std::string::npos) ? tok : nullptr;
@@ -2727,11 +2732,13 @@ void Tokenizer::setVarIdPass1()
             }
         }
 
-        if (tok == list.front() || Token::Match(tok, "[;{}]") ||
-            (tok->str() == "(" && isFunctionHead(tok,"{")) ||
-            (tok->str() == "(" && !scopeStack.top().isExecutable && isFunctionHead(tok,";:")) ||
-            (tok->str() == "," && !scopeStack.top().isExecutable) ||
-            (tok->isName() && tok->str().at(tok->str().length()-1U) == ':')) {
+        if (!scopeStack.top().isStructInit &&
+            (tok == list.front() ||
+             Token::Match(tok, "[;{}]") ||
+             (tok->str() == "(" && isFunctionHead(tok,"{")) ||
+             (tok->str() == "(" && !scopeStack.top().isExecutable && isFunctionHead(tok,";:")) ||
+             (tok->str() == "," && !scopeStack.top().isExecutable) ||
+             (tok->isName() && tok->str().at(tok->str().length()-1U) == ':'))) {
 
             // No variable declarations in sizeof
             if (Token::simpleMatch(tok->previous(), "sizeof (")) {
@@ -6024,18 +6031,16 @@ void Tokenizer::simplifyVariableMultipleAssign()
 }
 
 // Binary operators simplification map
-namespace {
-    const std::map<std::string, std::string> cAlternativeTokens = make_container< std::map<std::string, std::string> >()
-            << std::make_pair("and", "&&")
-            << std::make_pair("and_eq", "&=")
-            << std::make_pair("bitand", "&")
-            << std::make_pair("bitor", "|")
-            << std::make_pair("not_eq", "!=")
-            << std::make_pair("or", "||")
-            << std::make_pair("or_eq", "|=")
-            << std::make_pair("xor", "^")
-            << std::make_pair("xor_eq", "^=") ;
-}
+static const std::map<std::string, std::string> cAlternativeTokens = make_container< std::map<std::string, std::string> >()
+        << std::make_pair("and", "&&")
+        << std::make_pair("and_eq", "&=")
+        << std::make_pair("bitand", "&")
+        << std::make_pair("bitor", "|")
+        << std::make_pair("not_eq", "!=")
+        << std::make_pair("or", "||")
+        << std::make_pair("or_eq", "|=")
+        << std::make_pair("xor", "^")
+        << std::make_pair("xor_eq", "^=") ;
 
 // Simplify the C alternative tokens:
 //  and      =>     &&
@@ -6051,10 +6056,7 @@ namespace {
 //  xor_eq   =>     ^=
 bool Tokenizer::simplifyCAlternativeTokens()
 {
-    if (!isC())
-        return false;
-
-    /* For C code: executable scope level */
+    /* executable scope level */
     unsigned int executableScopeLevel = 0;
 
     bool ret = false;
@@ -8471,8 +8473,10 @@ void Tokenizer::simplifyStructDecl()
 
 void Tokenizer::simplifyCallingConvention()
 {
+    bool windows = _settings->isWindowsPlatform();
+
     for (Token *tok = list.front(); tok; tok = tok->next()) {
-        while (Token::Match(tok, "__cdecl|__stdcall|__fastcall|__thiscall|__clrcall|__syscall|__pascal|__fortran|__far|__near|WINAPI|APIENTRY|CALLBACK")) {
+        while (Token::Match(tok, "__cdecl|__stdcall|__fastcall|__thiscall|__clrcall|__syscall|__pascal|__fortran|__far|__near") || (windows && Token::Match(tok, "WINAPI|APIENTRY|CALLBACK"))) {
             tok->deleteThis();
         }
     }
