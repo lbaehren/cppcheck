@@ -68,6 +68,7 @@ public:
       *  settings()).
       */
     unsigned int check(const std::string &path);
+    unsigned int check(const Project::FileSettings &fs);
 
     /**
       * @brief Check the file.
