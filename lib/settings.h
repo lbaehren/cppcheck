@@ -28,7 +28,7 @@
 #include "config.h"
 #include "library.h"
 #include "platform.h"
-#include "project.h"
+#include "importproject.h"
 #include "suppressions.h"
 #include "standards.h"
 #include "errorlogger.h"
@@ -42,7 +42,7 @@
  * to pass individual values to functions or constructors now or in the
  * future when we might have even more detailed settings.
  */
-class CPPCHECKLIB Settings : public Platform {
+class CPPCHECKLIB Settings : public cppcheck::Platform {
 private:
     /** @brief Code to append in the checks */
     std::string _append;
@@ -244,7 +244,7 @@ public:
     /** Struct contains standards settings */
     Standards standards;
 
-    Project project;
+    ImportProject project;
 
     /**
      * @brief return true if a file is to be excluded from configuration checking

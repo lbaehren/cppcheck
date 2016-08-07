@@ -417,7 +417,7 @@ unsigned int __stdcall ThreadExecutor::threadProc(void *args)
 
     ThreadExecutor *threadExecutor = static_cast<ThreadExecutor*>(args);
     std::map<std::string, std::size_t>::const_iterator &itFile = threadExecutor->_itNextFile;
-    std::list<Project::FileSettings>::const_iterator &itFileSettings = threadExecutor->_itNextFileSettings;
+    std::list<ImportProject::FileSettings>::const_iterator &itFileSettings = threadExecutor->_itNextFileSettings;
 
     // guard static members of CppCheck against concurrent access
     EnterCriticalSection(&threadExecutor->_fileSync);
@@ -448,7 +448,7 @@ unsigned int __stdcall ThreadExecutor::threadProc(void *args)
                 result += fileChecker.check(file);
             }
         } else { // file settings..
-            const Project::FileSettings &fs = *itFileSettings;
+            const ImportProject::FileSettings &fs = *itFileSettings;
             ++itFileSettings;
             LeaveCriticalSection(&threadExecutor->_fileSync);
             result += fileChecker.check(fs);

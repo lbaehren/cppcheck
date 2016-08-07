@@ -33,12 +33,12 @@ HEADERS += $${PWD}/check.h \
            $${PWD}/checkvaarg.h \
            $${PWD}/cppcheck.h \
            $${PWD}/errorlogger.h \
+           $${PWD}/importproject.h \
            $${PWD}/library.h \
            $${PWD}/mathlib.h \
            $${PWD}/path.h \
            $${PWD}/platform.h \
            $${PWD}/preprocessor.h \
-           $${PWD}/project.h \
            $${PWD}/settings.h \
            $${PWD}/suppressions.h \
            $${PWD}/symboldatabase.h \
@@ -79,12 +79,12 @@ SOURCES += $${PWD}/astutils.cpp \
            $${PWD}/checkvaarg.cpp \
            $${PWD}/cppcheck.cpp \
            $${PWD}/errorlogger.cpp \
+           $${PWD}/importproject.cpp \
            $${PWD}/library.cpp \
            $${PWD}/mathlib.cpp \
            $${PWD}/path.cpp \
            $${PWD}/platform.cpp \
            $${PWD}/preprocessor.cpp \
-           $${PWD}/project.cpp \
            $${PWD}/settings.cpp \
            $${PWD}/suppressions.cpp \
            $${PWD}/symboldatabase.cpp \

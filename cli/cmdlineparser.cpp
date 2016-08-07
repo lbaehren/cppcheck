@@ -482,7 +482,7 @@ bool CmdLineParser::ParseFromArgs(int argc, const char* const argv[])
             }
             // experimental --project
             else if (std::strncmp(argv[i], "--project=", 10) == 0) {
-                _settings->project.load(argv[i]+10);
+                _settings->project.import(argv[i]+10);
             }
 
             // Report progress

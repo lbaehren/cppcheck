@@ -17,8 +17,8 @@
  */
 
 //---------------------------------------------------------------------------
-#ifndef projectH
-#define projectH
+#ifndef importprojectH
+#define importprojectH
 //---------------------------------------------------------------------------
 
 #include <list>
@@ -30,29 +30,28 @@
 /// @addtogroup Core
 /// @{
 
-
 /**
- * @brief Project settings.
+ * @brief Importing project settings.
  */
-class CPPCHECKLIB Project {
+class CPPCHECKLIB ImportProject {
 public:
     /** File settings. Multiple configurations for a file is allowed. */
     struct FileSettings {
-        FileSettings() : platformType(Platform::Unspecified) {}
+        FileSettings() : platformType(cppcheck::Platform::Unspecified) {}
         std::string filename;
         std::string defines;
         std::set<std::string> undefs;
         std::list<std::string> includePaths;
-        Platform::PlatformType platformType;
+        cppcheck::Platform::PlatformType platformType;
     };
     std::list<FileSettings> fileSettings;
 
-    void load(const std::string &filename);
+    void import(const std::string &filename);
 private:
-    void loadCompileCommands(std::istream &istr);
-    void loadVcxproj(const std::string &filename);
+    void importCompileCommands(std::istream &istr);
+    void importVcxproj(const std::string &filename);
 };
 
 /// @}
 //---------------------------------------------------------------------------
-#endif // projectH
+#endif // importprojectH

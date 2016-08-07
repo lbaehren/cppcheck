@@ -827,8 +827,8 @@ int CppCheckExecutor::check_internal(CppCheck& cppcheck, int /*argc*/, const cha
 
         // filesettings
         c = 0;
-        for (std::list<Project::FileSettings>::const_iterator fs = settings.project.fileSettings.begin(); fs != settings.project.fileSettings.end(); ++fs) {
-            returnValue += cppcheck.check((Project::FileSettings)*fs);
+        for (std::list<ImportProject::FileSettings>::const_iterator fs = settings.project.fileSettings.begin(); fs != settings.project.fileSettings.end(); ++fs) {
+            returnValue += cppcheck.check(*fs);
             ++c;
             if (!settings.quiet)
                 reportStatus(c, settings.project.fileSettings.size(), c, settings.project.fileSettings.size());

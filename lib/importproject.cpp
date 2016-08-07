@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "project.h"
+#include "importproject.h"
 #include "path.h"
 #include "settings.h"
 #include "tokenlist.h"
@@ -25,19 +25,19 @@
 #include <fstream>
 #include <map>
 
-void Project::load(const std::string &filename)
+void ImportProject::import(const std::string &filename)
 {
     std::ifstream fin(filename);
     if (!fin.is_open())
         return;
     if (filename == "compile_commands.json") {
-        loadCompileCommands(fin);
+        importCompileCommands(fin);
     } else if (filename.find(".vcxproj") != std::string::npos) {
-        loadVcxproj(filename);
+        importVcxproj(filename);
     }
 }
 
-void Project::loadCompileCommands(std::istream &istr)
+void ImportProject::importCompileCommands(std::istream &istr)
 {
     std::map<std::string, std::string> values;
 
@@ -159,7 +159,7 @@ static std::list<std::string> toStringList(const std::string &s)
     return ret;
 }
 
-void Project::loadVcxproj(const std::string &filename)
+void ImportProject::importVcxproj(const std::string &filename)
 {
     std::list<ProjectConfiguration> projectConfigurationList;
     std::list<std::string> compileList;
@@ -200,9 +200,9 @@ void Project::loadVcxproj(const std::string &filename)
                 fs.defines  = i->preprocessorDefinitions;
                 fs.includePaths = toStringList(i->additionalIncludePaths);
                 if (p->platform == "Win32")
-                    fs.platformType = Platform::Win32W;
+                    fs.platformType = cppcheck::Platform::Win32W;
                 else if (p->platform == "x64")
-                    fs.platformType = Platform::Win64;
+                    fs.platformType = cppcheck::Platform::Win64;
                 fileSettings.push_back(fs);
             }
         }

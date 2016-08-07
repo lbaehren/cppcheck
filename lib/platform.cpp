@@ -20,7 +20,7 @@
 #include "tinyxml2.h"
 
 
-Platform::Platform()
+cppcheck::Platform::Platform()
 {
     // This assumes the code you are checking is for the same architecture this is compiled on.
 #if defined(_WIN64)
@@ -33,7 +33,7 @@ Platform::Platform()
 }
 
 
-bool Platform::platform(Platform::PlatformType type)
+bool cppcheck::Platform::platform(cppcheck::Platform::PlatformType type)
 {
     switch (type) {
     case Unspecified:
@@ -166,7 +166,7 @@ bool Platform::platform(Platform::PlatformType type)
     return false;
 }
 
-bool Platform::platformFile(const std::string &filename)
+bool cppcheck::Platform::platformFile(const std::string &filename)
 {
     // open file..
     tinyxml2::XMLDocument doc;
