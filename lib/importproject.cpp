@@ -30,7 +30,7 @@ void ImportProject::import(const std::string &filename)
     std::ifstream fin(filename);
     if (!fin.is_open())
         return;
-    if (filename == "compile_commands.json") {
+    if (filename.find("compile_commands.json") != std::string::npos) {
         importCompileCommands(fin);
     } else if (filename.find(".vcxproj") != std::string::npos) {
         importVcxproj(filename);
@@ -40,6 +40,8 @@ void ImportProject::import(const std::string &filename)
 void ImportProject::importCompileCommands(std::istream &istr)
 {
     std::map<std::string, std::string> values;
+
+    // TODO: Use a JSON parser
 
     Settings settings;
     TokenList tokenList(&settings);
@@ -68,8 +70,11 @@ void ImportProject::importCompileCommands(std::istream &istr)
                         break;
                     char F = command[pos++];
                     std::string fval;
-                    while (pos < command.size() && command[pos] != ' ')
-                        fval += command[pos++];
+                    while (pos < command.size() && command[pos] != ' ') {
+                        if (command[pos] != '\\')
+                            fval += command[pos];
+                        pos++;
+                    }
                     if (F=='D')
                         fs.defines += fval + ";";
                     else if (F=='U')
