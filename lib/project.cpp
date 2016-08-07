@@ -86,7 +86,7 @@ void Project::loadCompileCommands(std::istream &istr)
 
 namespace {
     struct ProjectConfiguration {
-        ProjectConfiguration(const tinyxml2::XMLElement *cfg) {
+        explicit ProjectConfiguration(const tinyxml2::XMLElement *cfg) {
             for (const tinyxml2::XMLElement *e = cfg->FirstChildElement(); e; e = e->NextSiblingElement()) {
                 if (std::strcmp(e->Name(),"Configuration")==0)
                     configuration = e->GetText();
@@ -99,7 +99,7 @@ namespace {
     };
 
     struct ItemDefinitionGroup {
-        ItemDefinitionGroup(const tinyxml2::XMLElement *idg) {
+        explicit ItemDefinitionGroup(const tinyxml2::XMLElement *idg) {
             const char *condAttr = idg->Attribute("Condition");
             if (condAttr)
                 condition = condAttr;
