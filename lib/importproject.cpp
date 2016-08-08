@@ -207,12 +207,14 @@ void ImportProject::importVcxproj(const std::string &filename)
                 FileSettings fs;
                 fs.filename = Path::simplifyPath(Path::getPathFromFilename(filename) + *c);
                 fs.cfg = p->name;
-                fs.defines  = i->preprocessorDefinitions;
+                fs.defines = "_MSC_VER=1700;_WIN32;" + i->preprocessorDefinitions;
                 fs.includePaths = toStringList(i->additionalIncludePaths);
                 if (p->platform == "Win32")
                     fs.platformType = cppcheck::Platform::Win32W;
-                else if (p->platform == "x64")
+                else if (p->platform == "x64") {
                     fs.platformType = cppcheck::Platform::Win64;
+                    fs.defines += ";_WIN64";
+                }
                 fileSettings.push_back(fs);
             }
         }
