@@ -38,6 +38,7 @@ public:
     /** File settings. Multiple configurations for a file is allowed. */
     struct FileSettings {
         FileSettings() : platformType(cppcheck::Platform::Unspecified) {}
+        std::string cfg;
         std::string filename;
         std::string defines;
         std::set<std::string> undefs;

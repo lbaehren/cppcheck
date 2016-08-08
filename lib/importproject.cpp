@@ -92,6 +92,9 @@ void ImportProject::importCompileCommands(std::istream &istr)
 namespace {
     struct ProjectConfiguration {
         explicit ProjectConfiguration(const tinyxml2::XMLElement *cfg) {
+            const char *a = cfg->Attribute("Include");
+            if (a)
+                name = a;
             for (const tinyxml2::XMLElement *e = cfg->FirstChildElement(); e; e = e->NextSiblingElement()) {
                 if (std::strcmp(e->Name(),"Configuration")==0)
                     configuration = e->GetText();
@@ -99,6 +102,7 @@ namespace {
                     platform = e->GetText();
             }
         }
+        std::string name;
         std::string configuration;
         std::string platform;
     };
@@ -202,6 +206,7 @@ void ImportProject::importVcxproj(const std::string &filename)
                     continue;
                 FileSettings fs;
                 fs.filename = Path::simplifyPath(Path::getPathFromFilename(filename) + *c);
+                fs.cfg = p->name;
                 fs.defines  = i->preprocessorDefinitions;
                 fs.includePaths = toStringList(i->additionalIncludePaths);
                 if (p->platform == "Win32")
