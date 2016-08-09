@@ -43,13 +43,35 @@ void ImportProject::ignorePaths(std::vector<std::string> &ipaths)
     }
 }
 
+static std::string fixDefines(std::string defs)
+{
+    while (defs.find(";%(") != std::string::npos) {
+        std::string::size_type pos1 = defs.find(";%(");
+        std::string::size_type pos2 = defs.find(";", pos1+1);
+        defs.erase(pos1, pos2 == std::string::npos ? pos2 : (pos2-pos1));
+    }
+    while (defs.find(";;") != std::string::npos)
+        defs.erase(defs.find(";;"),1);
+    if (!defs.empty() && defs[defs.size()-1U] == ';')
+        defs.erase(defs.size()-1U);
+    return defs;
+}
+
 static std::list<std::string> fixIncludePaths(const std::string &basepath, const std::list<std::string> &in)
 {
     std::list<std::string> ret;
     for (std::list<std::string>::const_iterator it = in.begin(); it != in.end(); ++it) {
+        if (it->empty())
+            continue;
         if (it->compare(0,2,"%(")==0)
             continue;
-        ret.push_back(Path::simplifyPath(basepath + Path::fromNativeSeparators(*it)));
+        std::string s(Path::fromNativeSeparators(*it));
+        if (s[s.size()-1U] == '/') // this is a temporary hack, simplifyPath can crash if path ends with '/'
+            s.erase(s.size() - 1U);
+        s = Path::simplifyPath(basepath + s);
+        if (s.empty())
+            continue;
+        ret.push_back(s + '/');
     }
     return ret;
 }
@@ -259,14 +281,15 @@ void ImportProject::importVcxproj(const std::string &filename)
                 FileSettings fs;
                 fs.filename = Path::simplifyPath(Path::getPathFromFilename(filename) + *c);
                 fs.cfg = p->name;
-                fs.defines = "_MSC_VER=1700;_WIN32;" + i->preprocessorDefinitions;
+                fs.defines = "_MSC_VER=1700;_WIN32=1;" + i->preprocessorDefinitions;
                 fs.includePaths = fixIncludePaths(Path::getPathFromFilename(filename), toStringList(i->additionalIncludePaths));
                 if (p->platform == "Win32")
                     fs.platformType = cppcheck::Platform::Win32W;
                 else if (p->platform == "x64") {
                     fs.platformType = cppcheck::Platform::Win64;
-                    fs.defines += ";_WIN64";
+                    fs.defines += ";_WIN64=1";
                 }
+                fs.defines = fixDefines(fs.defines);
                 fileSettings.push_back(fs);
             }
         }
