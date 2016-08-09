@@ -50,6 +50,7 @@ public:
     void import(const std::string &filename);
 private:
     void importCompileCommands(std::istream &istr);
+    void importSln(std::istream &istr, const std::string &path);
     void importVcxproj(const std::string &filename);
 };
 

@@ -24,6 +24,7 @@
 #include "tinyxml2.h"
 #include <fstream>
 #include <map>
+//#include <iostream>
 
 void ImportProject::import(const std::string &filename)
 {
@@ -32,6 +33,11 @@ void ImportProject::import(const std::string &filename)
         return;
     if (filename.find("compile_commands.json") != std::string::npos) {
         importCompileCommands(fin);
+    } else if (filename.find(".sln") != std::string::npos) {
+        std::string path(Path::getPathFromFilename(Path::fromNativeSeparators(filename)));
+        if (!path.empty() && path[path.size()-1U] != '/')
+            path += '/';
+        importSln(fin,path);
     } else if (filename.find(".vcxproj") != std::string::npos) {
         importVcxproj(filename);
     }
@@ -86,6 +92,24 @@ void ImportProject::importCompileCommands(std::istream &istr)
             }
             values.clear();
         }
+    }
+}
+
+void ImportProject::importSln(std::istream &istr, const std::string &path)
+{
+    std::string line;
+    while (std::getline(istr,line)) {
+        if (line.compare(0,8,"Project(")!=0)
+            continue;
+        const std::string::size_type pos = line.find(".vcxproj");
+        if (pos == std::string::npos)
+            continue;
+        const std::string::size_type pos1 = line.rfind("\"",pos);
+        if (pos == std::string::npos)
+            continue;
+        const std::string vcxproj(line.substr(pos1+1, pos-pos1+7));
+        //std::cout << "Importing " << vcxproj << "..." << std::endl;
+        importVcxproj(path + Path::fromNativeSeparators(vcxproj));
     }
 }
 
