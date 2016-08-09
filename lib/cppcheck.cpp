@@ -28,6 +28,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <iostream>
 #include "timer.h"
 #include "version.h"
 
@@ -88,7 +89,7 @@ unsigned int CppCheck::check(const ImportProject::FileSettings &fs)
     temp._settings.includePaths = fs.includePaths;
     // TODO: temp._settings.userUndefs = fs.undefs;
     if (fs.platformType != Settings::Unspecified) {
-        temp._settings.platformType = fs.platformType;
+        temp._settings.platform(fs.platformType);
     }
     std::ifstream fin(fs.filename.c_str());
     return temp.processFile(fs.filename, fs.cfg, fin);
@@ -109,6 +110,13 @@ unsigned int CppCheck::processFile(const std::string& filename, const std::strin
         std::string fixedpath = Path::simplifyPath(filename);
         fixedpath = Path::toNativeSeparators(fixedpath);
         _errorLogger.reportOut(std::string("Checking ") + fixedpath + ' ' + cfgname + std::string("..."));
+
+        std::cout << "Defines: " << _settings.userDefines << std::endl;
+        std::cout << "Includes: ";
+        for (std::string I:_settings.includePaths)
+            std::cout << " -I" << I;
+        std::cout << std::endl;
+        std::cout << "Platform: " << _settings.platformString() << std::endl;
     }
 
     bool internalErrorFound(false);

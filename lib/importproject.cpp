@@ -43,6 +43,16 @@ void ImportProject::ignorePaths(std::vector<std::string> &ipaths)
     }
 }
 
+static std::list<std::string> fixIncludePaths(const std::string &basepath, const std::list<std::string> &in)
+{
+    std::list<std::string> ret;
+    for (std::list<std::string>::const_iterator it = in.begin(); it != in.end(); ++it) {
+        if (it->compare(0,2,"%(")==0)
+            continue;
+        ret.push_back(Path::simplifyPath(basepath + Path::fromNativeSeparators(*it)));
+    }
+    return ret;
+}
 
 void ImportProject::import(const std::string &filename)
 {
@@ -250,7 +260,7 @@ void ImportProject::importVcxproj(const std::string &filename)
                 fs.filename = Path::simplifyPath(Path::getPathFromFilename(filename) + *c);
                 fs.cfg = p->name;
                 fs.defines = "_MSC_VER=1700;_WIN32;" + i->preprocessorDefinitions;
-                fs.includePaths = toStringList(i->additionalIncludePaths);
+                fs.includePaths = fixIncludePaths(Path::getPathFromFilename(filename), toStringList(i->additionalIncludePaths));
                 if (p->platform == "Win32")
                     fs.platformType = cppcheck::Platform::Win32W;
                 else if (p->platform == "x64") {
