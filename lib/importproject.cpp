@@ -29,12 +29,17 @@
 void ImportProject::ignorePaths(std::vector<std::string> &ipaths)
 {
     for (std::list<FileSettings>::iterator it = fileSettings.begin(); it != fileSettings.end();) {
+        bool ignore = false;
         for (std::size_t i = 0; i < ipaths.size(); ++i) {
-            if (it->filename.size() > ipaths[i].size() && it->filename.compare(0,ipaths[i].size(),ipaths[i])==0)
-                fileSettings.erase(it++);
-            else
-                ++it;
+            if (it->filename.size() > ipaths[i].size() && it->filename.compare(0,ipaths[i].size(),ipaths[i])==0) {
+                ignore = true;
+                break;
+            }
         }
+        if (ignore)
+            fileSettings.erase(it++);
+        else
+            ++it;
     }
 }
 
