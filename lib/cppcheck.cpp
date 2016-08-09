@@ -83,6 +83,7 @@ unsigned int CppCheck::check(const std::string &path, const std::string &content
 unsigned int CppCheck::check(const ImportProject::FileSettings &fs)
 {
     CppCheck temp(*this, _useGlobalSuppressions);
+    temp._settings = _settings;
     temp._settings.userDefines = fs.defines;
     temp._settings.includePaths = fs.includePaths;
     // TODO: temp._settings.userUndefs = fs.undefs;
