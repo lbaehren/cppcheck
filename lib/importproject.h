@@ -24,6 +24,7 @@
 #include <list>
 #include <string>
 #include <set>
+#include <vector>
 #include "config.h"
 #include "platform.h"
 
@@ -46,6 +47,8 @@ public:
         cppcheck::Platform::PlatformType platformType;
     };
     std::list<FileSettings> fileSettings;
+
+    void ignorePaths(std::vector<std::string> &ipaths);
 
     void import(const std::string &filename);
 private:

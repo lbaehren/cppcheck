@@ -26,6 +26,19 @@
 #include <map>
 //#include <iostream>
 
+void ImportProject::ignorePaths(std::vector<std::string> &ipaths)
+{
+    for (std::list<FileSettings>::iterator it = fileSettings.begin(); it != fileSettings.end();) {
+        for (std::size_t i = 0; i < ipaths.size(); ++i) {
+            if (it->filename.size() > ipaths[i].size() && it->filename.compare(0,ipaths[i].size(),ipaths[i])==0)
+                fileSettings.erase(it++);
+            else
+                ++it;
+        }
+    }
+}
+
+
 void ImportProject::import(const std::string &filename)
 {
     std::ifstream fin(filename);

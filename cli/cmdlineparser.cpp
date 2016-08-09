@@ -741,6 +741,8 @@ bool CmdLineParser::ParseFromArgs(int argc, const char* const argv[])
         }
     }
 
+    _settings->project.ignorePaths(_ignoredPaths);
+
     if (_settings->force)
         _settings->maxConfigs = ~0U;
 
